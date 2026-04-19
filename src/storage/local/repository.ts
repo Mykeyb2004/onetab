@@ -1,4 +1,5 @@
 import type { ExtensionSettings } from "../../types/settings";
+import { mergeSessionGroupsByTitle } from "../../domain/sessions/session-groups";
 import type { SessionGroup } from "../../types/session";
 import {
   createDefaultRootState,
@@ -15,7 +16,12 @@ export interface ExtensionStorageArea {
 
 export async function readRootState(storage: ExtensionStorageArea): Promise<RootState> {
   const result = await storage.get(ROOT_STORAGE_KEY);
-  return migrateRootState(result[ROOT_STORAGE_KEY]);
+  const state = migrateRootState(result[ROOT_STORAGE_KEY]);
+
+  return {
+    ...state,
+    sessions: mergeSessionGroupsByTitle(state.sessions)
+  };
 }
 
 export async function writeRootState(
@@ -44,7 +50,7 @@ export async function appendSessionGroup(
   const state = await readRootState(storage);
   const nextState: RootState = {
     ...state,
-    sessions: [group, ...state.sessions]
+    sessions: mergeSessionGroupsByTitle([group, ...state.sessions])
   };
 
   await writeRootState(storage, nextState);

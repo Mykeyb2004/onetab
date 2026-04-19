@@ -81,6 +81,10 @@ function normalizeImportedSessions(
             : formatSessionTitle(importedAt),
         createdAt: normalizeIsoString(rawSession.createdAt, importedAtIso),
         updatedAt: normalizeIsoString(rawSession.updatedAt, importedAtIso),
+        trashedAt:
+          typeof rawSession.trashedAt === "string" && !Number.isNaN(Date.parse(rawSession.trashedAt))
+            ? rawSession.trashedAt
+            : null,
         tabCount: normalizedTabs.length,
         pinned: Boolean(rawSession.pinned),
         sourceWindowId: null,

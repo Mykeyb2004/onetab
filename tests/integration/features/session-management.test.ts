@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { deleteSavedTab } from "../../../src/features/sessions/delete-saved-tab";
 import { deleteSessionGroup } from "../../../src/features/sessions/delete-session-group";
+import { deleteSessionGroupPermanently } from "../../../src/features/sessions/delete-session-group-permanently";
+import { emptyTrash } from "../../../src/features/sessions/empty-trash";
 import { renameSessionGroup } from "../../../src/features/sessions/rename-session-group";
+import { restoreSessionGroupFromTrash } from "../../../src/features/sessions/restore-session-group-from-trash";
 import { togglePinSessionGroup } from "../../../src/features/sessions/toggle-pin-session-group";
 import {
   readRootState,
@@ -35,6 +38,7 @@ function createSessionGroup(): SessionGroup {
     title: "Initial Title",
     createdAt: "2026-04-19T10:00:00.000Z",
     updatedAt: "2026-04-19T10:00:00.000Z",
+    trashedAt: null,
     tabCount: 2,
     pinned: false,
     sourceWindowId: 1,
@@ -84,7 +88,7 @@ describe("session management features", () => {
     expect(state.sessions[0].updatedAt).toBe("2026-04-19T11:05:00.000Z");
   });
 
-  it("should delete saved tabs and entire session groups", async () => {
+  it("should delete saved tabs and move session groups into the trash", async () => {
     const storage = createMemoryStorage();
     const rootState = createDefaultRootState();
     rootState.sessions = [createSessionGroup()];
@@ -98,9 +102,70 @@ describe("session management features", () => {
     let state = await readRootState(storage);
     expect(state.sessions[0].tabs).toHaveLength(1);
 
-    await deleteSessionGroup("session-1", { storage });
+    await deleteSessionGroup("session-1", {
+      storage,
+      now: () => new Date(2026, 3, 19, 19, 20)
+    });
+
+    state = await readRootState(storage);
+    expect(state.sessions).toHaveLength(1);
+    expect(state.sessions[0].trashedAt).toBe("2026-04-19T11:20:00.000Z");
+  });
+
+  it("should restore and permanently delete trashed session groups", async () => {
+    const storage = createMemoryStorage();
+    const rootState = createDefaultRootState();
+    rootState.sessions = [
+      {
+        ...createSessionGroup(),
+        trashedAt: "2026-04-19T11:30:00.000Z"
+      }
+    ];
+
+    await writeRootState(storage, rootState);
+
+    await restoreSessionGroupFromTrash("session-1", {
+      storage,
+      now: () => new Date(2026, 3, 19, 19, 35)
+    });
+
+    let state = await readRootState(storage);
+    expect(state.sessions[0].trashedAt).toBeNull();
+
+    await deleteSessionGroup("session-1", {
+      storage,
+      now: () => new Date(2026, 3, 19, 19, 40)
+    });
+    await deleteSessionGroupPermanently("session-1", { storage });
 
     state = await readRootState(storage);
     expect(state.sessions).toHaveLength(0);
+  });
+
+  it("should empty the trash", async () => {
+    const storage = createMemoryStorage();
+    const rootState = createDefaultRootState();
+    rootState.sessions = [
+      {
+        ...createSessionGroup(),
+        id: "session-1",
+        trashedAt: "2026-04-19T11:30:00.000Z"
+      },
+      {
+        ...createSessionGroup(),
+        id: "session-2",
+        title: "Second Session",
+        trashedAt: null
+      }
+    ];
+
+    await writeRootState(storage, rootState);
+
+    const removedCount = await emptyTrash({ storage });
+    const state = await readRootState(storage);
+
+    expect(removedCount).toBe(1);
+    expect(state.sessions).toHaveLength(1);
+    expect(state.sessions[0].id).toBe("session-2");
   });
 });

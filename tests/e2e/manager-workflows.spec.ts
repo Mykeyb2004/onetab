@@ -25,6 +25,7 @@ async function seedManagerState(extensionId: string, managerPage: import("@playw
             title: "Research Bundle",
             createdAt: "2026-04-19T10:00:00.000Z",
             updatedAt: "2026-04-19T10:00:00.000Z",
+            trashedAt: null,
             tabCount: 2,
             pinned: false,
             sourceWindowId: 1,

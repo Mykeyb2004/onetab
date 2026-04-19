@@ -94,7 +94,7 @@ describe("capture feature", () => {
     expect(result.closedCount).toBe(2);
     expect(closedTabIds).toEqual([1, 2]);
     expect(state.sessions).toHaveLength(1);
-    expect(state.sessions[0].title).toBe("保存于 2026-04-19 15:00");
+    expect(state.sessions[0].title).toBe("保存于 2026-04-19");
   });
 
   it("should create a session before closing tabs", async () => {

@@ -1,5 +1,5 @@
 import type { ExtensionSettings } from "../../types/settings";
-import type { SessionGroup } from "../../types/session";
+import type { SavedTab, SessionGroup } from "../../types/session";
 
 export const ROOT_STORAGE_KEY = "tabvault:root";
 export const SCHEMA_VERSION = 1;
@@ -29,6 +29,68 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function normalizeSavedTabs(input: unknown): SavedTab[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((rawTab, index) => {
+    if (!isObject(rawTab) || typeof rawTab.url !== "string") {
+      return [];
+    }
+
+    return [
+      {
+        id: typeof rawTab.id === "string" ? rawTab.id : `migrated-tab-${index}`,
+        title:
+          typeof rawTab.title === "string" && rawTab.title.trim() ? rawTab.title.trim() : rawTab.url,
+        url: rawTab.url,
+        favIconUrl: typeof rawTab.favIconUrl === "string" ? rawTab.favIconUrl : null,
+        createdAt:
+          typeof rawTab.createdAt === "string" ? rawTab.createdAt : new Date().toISOString(),
+        lastOpenedAt:
+          typeof rawTab.lastOpenedAt === "string" ? rawTab.lastOpenedAt : null,
+        originalIndex: typeof rawTab.originalIndex === "number" ? rawTab.originalIndex : index
+      }
+    ];
+  });
+}
+
+function normalizeSessions(input: unknown): SessionGroup[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((rawSession, index) => {
+    if (!isObject(rawSession)) {
+      return [];
+    }
+
+    const tabs = normalizeSavedTabs(rawSession.tabs);
+    const createdAt =
+      typeof rawSession.createdAt === "string" ? rawSession.createdAt : new Date().toISOString();
+    const updatedAt =
+      typeof rawSession.updatedAt === "string" ? rawSession.updatedAt : createdAt;
+
+    return [
+      {
+        id: typeof rawSession.id === "string" ? rawSession.id : `migrated-session-${index}`,
+        title:
+          typeof rawSession.title === "string" && rawSession.title.trim()
+            ? rawSession.title.trim()
+            : `Imported Session ${index + 1}`,
+        createdAt,
+        updatedAt,
+        trashedAt: typeof rawSession.trashedAt === "string" ? rawSession.trashedAt : null,
+        tabCount: tabs.length,
+        pinned: Boolean(rawSession.pinned),
+        sourceWindowId: typeof rawSession.sourceWindowId === "number" ? rawSession.sourceWindowId : null,
+        tabs
+      }
+    ];
+  });
+}
+
 export function migrateRootState(input: unknown): RootState {
   if (!isObject(input)) {
     return createDefaultRootState();
@@ -37,7 +99,7 @@ export function migrateRootState(input: unknown): RootState {
   const schemaVersion =
     typeof input.schemaVersion === "number" ? input.schemaVersion : SCHEMA_VERSION;
 
-  const sessions = Array.isArray(input.sessions) ? (input.sessions as SessionGroup[]) : [];
+  const sessions = normalizeSessions(input.sessions);
   const settings: ExtensionSettings = isObject(input.settings)
     ? {
         restoreBehavior:

@@ -8,6 +8,7 @@ import type { BrowserTab, TabsAdapter } from "../../types/browser";
 import type { SessionGroup } from "../../types/session";
 import { chromeTabsAdapter } from "../../adapters/chrome/tabs";
 import { isSupportedTabUrl } from "../../domain/tabs/is-supported-tab-url";
+import { isSessionGroupTrashed } from "../../domain/sessions/session-groups";
 
 interface AddBrowserTabToSessionGroupDependencies {
   storage: ExtensionStorageArea;
@@ -67,6 +68,10 @@ export async function addBrowserTabToSessionGroup(
       return sessionGroup;
     }
 
+    if (isSessionGroupTrashed(sessionGroup)) {
+      return sessionGroup;
+    }
+
     const nextSession: SessionGroup = {
       ...sessionGroup,
       tabs: [...sessionGroup.tabs, buildNextSavedTab(browserTab, sessionGroup, now)],
@@ -81,7 +86,7 @@ export async function addBrowserTabToSessionGroup(
   if (!updatedSession) {
     return {
       ok: false,
-      message: "Recent group not found.",
+      message: "Recent group not found or is already in the trash.",
       sessionId: null
     };
   }

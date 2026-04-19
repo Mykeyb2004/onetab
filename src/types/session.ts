@@ -13,6 +13,7 @@ export interface SessionGroup {
   title: string;
   createdAt: string;
   updatedAt: string;
+  trashedAt: string | null;
   tabCount: number;
   pinned: boolean;
   sourceWindowId: number | null;

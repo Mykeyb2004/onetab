@@ -53,7 +53,7 @@ describe("local repository", () => {
     const state = await readRootState(storage);
 
     expect(state.sessions).toHaveLength(1);
-    expect(state.sessions[0].title).toBe("保存于 2026-04-19 10:45");
+    expect(state.sessions[0].title).toBe("保存于 2026-04-19");
     expect(state.settings.defaultClickAction).toBe("open-manager");
     expect(state.settings.enableContextMenu).toBe(false);
   });

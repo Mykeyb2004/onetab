@@ -8,6 +8,7 @@ function createSessionGroup(overrides: Partial<SessionGroup>): SessionGroup {
     title: "Default",
     createdAt: "2026-04-19T10:00:00.000Z",
     updatedAt: "2026-04-19T10:00:00.000Z",
+    trashedAt: null,
     tabCount: 1,
     pinned: false,
     sourceWindowId: 1,

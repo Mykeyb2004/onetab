@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSessionGroup } from "../../../src/domain/sessions/create-session-group";
 
 describe("createSessionGroup", () => {
-  it("should assign a default title using the approved timestamp format", () => {
+  it("should assign a default title using the approved date format", () => {
     const group = createSessionGroup(
       [{ url: "https://example.com", title: "Example", index: 0 }],
       {
@@ -11,7 +11,7 @@ describe("createSessionGroup", () => {
       }
     );
 
-    expect(group.title).toBe("保存于 2026-04-19 14:30");
+    expect(group.title).toBe("保存于 2026-04-19");
     expect(group.sourceWindowId).toBe(12);
     expect(group.tabCount).toBe(1);
   });

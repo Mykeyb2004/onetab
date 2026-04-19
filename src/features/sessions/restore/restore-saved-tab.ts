@@ -1,5 +1,6 @@
 import { chromeLocalStorage } from "../../../adapters/chrome/storage";
 import { chromeRestoreTabsAdapter } from "../../../adapters/chrome/restore-tabs";
+import { isSessionGroupTrashed } from "../../../domain/sessions/session-groups";
 import {
   readRootState,
   writeRootState,
@@ -38,6 +39,15 @@ export async function restoreSavedTab(
       message: "Session group not found.",
       removedGroup: false,
       remainingTabCount: 0
+    };
+  }
+
+  if (isSessionGroupTrashed(sessionGroup)) {
+    return {
+      ok: false,
+      message: "Restore this group from the trash before opening its tabs.",
+      removedGroup: false,
+      remainingTabCount: sessionGroup.tabs.length
     };
   }
 

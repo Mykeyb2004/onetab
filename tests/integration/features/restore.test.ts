@@ -48,6 +48,7 @@ function createSessionGroup(): SessionGroup {
     title: "保存于 2026-04-19 18:00",
     createdAt: "2026-04-19T10:00:00.000Z",
     updatedAt: "2026-04-19T10:00:00.000Z",
+    trashedAt: null,
     tabCount: 2,
     pinned: false,
     sourceWindowId: 5,

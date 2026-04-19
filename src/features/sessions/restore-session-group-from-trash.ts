@@ -4,37 +4,39 @@ import {
   writeRootState,
   type ExtensionStorageArea
 } from "../../storage/local/repository";
+import type { SessionGroup } from "../../types/session";
 
-interface DeleteSessionGroupDependencies {
+interface RestoreSessionGroupFromTrashDependencies {
   storage: ExtensionStorageArea;
   now?: () => Date;
 }
 
-export async function deleteSessionGroup(
+export async function restoreSessionGroupFromTrash(
   sessionId: string,
-  dependencies: DeleteSessionGroupDependencies = {
+  dependencies: RestoreSessionGroupFromTrashDependencies = {
     storage: chromeLocalStorage,
     now: () => new Date()
   }
-): Promise<void> {
+): Promise<SessionGroup> {
   const state = await readRootState(dependencies.storage);
-  const trashedAt = (dependencies.now?.() ?? new Date()).toISOString();
-  let found = false;
+  const restoredAt = (dependencies.now?.() ?? new Date()).toISOString();
+  let restoredSession: SessionGroup | null = null;
+
   const nextSessions = state.sessions.map((session) => {
     if (session.id !== sessionId) {
       return session;
     }
 
-    found = true;
-
-    return {
+    restoredSession = {
       ...session,
-      trashedAt,
-      updatedAt: trashedAt
+      trashedAt: null,
+      updatedAt: restoredAt
     };
+
+    return restoredSession;
   });
 
-  if (!found) {
+  if (!restoredSession) {
     throw new Error("Session group not found.");
   }
 
@@ -42,4 +44,6 @@ export async function deleteSessionGroup(
     ...state,
     sessions: nextSessions
   });
+
+  return restoredSession;
 }

@@ -16,10 +16,11 @@ import {
   getBrowserTabsToTheRight,
   getHighlightedBrowserTabs
 } from "../domain/tabs/select-browser-tabs";
+import { splitSessionGroups } from "../domain/sessions/session-groups";
 import { sortSessionGroups } from "../domain/sessions/sort-session-groups";
 import { bootstrapRootState, readRootState } from "../storage/local/repository";
 import type { RuntimeMessage, RuntimeResponse } from "../shared/messages";
-import { ROOT_STORAGE_KEY } from "../storage/local/schema";
+import { ROOT_STORAGE_KEY, type RootState } from "../storage/local/schema";
 import type { BrowserTab } from "../types/browser";
 import type { SessionGroup } from "../types/session";
 
@@ -70,7 +71,10 @@ async function openHelpPage(): Promise<void> {
 async function getPageContextData(tab: chrome.tabs.Tab | undefined): Promise<PageContextData> {
   const currentTab = toBrowserTab(tab ?? ({} as chrome.tabs.Tab));
   const state = await readRootState(chromeLocalStorage);
-  const recentSessions = sortSessionGroups(state.sessions).slice(0, RECENT_GROUP_LIMIT);
+  const recentSessions = sortSessionGroups(splitSessionGroups(state.sessions).activeSessions).slice(
+    0,
+    RECENT_GROUP_LIMIT
+  );
 
   if (!currentTab) {
     return {
@@ -121,7 +125,10 @@ async function ensureContextMenus(): Promise<void> {
     contexts: ["action"]
   });
 
-  const recentSessions = sortSessionGroups(state.sessions).slice(0, RECENT_GROUP_LIMIT);
+  const recentSessions = sortSessionGroups(splitSessionGroups(state.sessions).activeSessions).slice(
+    0,
+    RECENT_GROUP_LIMIT
+  );
 
   await createContextMenu({
     id: CONTEXT_MENU_IDS.pageRoot,
@@ -281,6 +288,13 @@ function scheduleRuntimeBehaviorSync(): Promise<void> {
     });
 
   return runtimeBehaviorSyncQueue;
+}
+
+function didSettingsChange(previousState: unknown, nextState: unknown): boolean {
+  const previousSettings = (previousState as RootState | undefined)?.settings;
+  const nextSettings = (nextState as RootState | undefined)?.settings;
+
+  return JSON.stringify(previousSettings) !== JSON.stringify(nextSettings);
 }
 
 const captureDependencies = {
@@ -491,5 +505,11 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     return;
   }
 
-  void scheduleRuntimeBehaviorSync();
+  if (
+    didSettingsChange(rootStateChange.oldValue, rootStateChange.newValue) ||
+    JSON.stringify((rootStateChange.oldValue as RootState | undefined)?.sessions) !==
+      JSON.stringify((rootStateChange.newValue as RootState | undefined)?.sessions)
+  ) {
+    void scheduleRuntimeBehaviorSync();
+  }
 });

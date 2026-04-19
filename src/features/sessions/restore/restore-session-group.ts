@@ -1,4 +1,5 @@
 import { sortSavedTabsByOriginalIndex } from "../../../domain/sessions/sort-saved-tabs";
+import { isSessionGroupTrashed } from "../../../domain/sessions/session-groups";
 import { chromeLocalStorage } from "../../../adapters/chrome/storage";
 import { chromeRestoreTabsAdapter } from "../../../adapters/chrome/restore-tabs";
 import {
@@ -36,6 +37,15 @@ export async function restoreSessionGroup(
     return {
       ok: false,
       message: "Session group not found.",
+      restoredCount: 0,
+      windowId: null
+    };
+  }
+
+  if (isSessionGroupTrashed(sessionGroup)) {
+    return {
+      ok: false,
+      message: "Restore this group from the trash before opening its tabs.",
       restoredCount: 0,
       windowId: null
     };

@@ -29,6 +29,7 @@ export function createSessionGroup(
     title,
     createdAt,
     updatedAt: createdAt,
+    trashedAt: null,
     tabCount: savedTabs.length,
     pinned: false,
     sourceWindowId: options?.sourceWindowId ?? null,
