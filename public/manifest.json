@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "TabVault",
+  "version": "0.1.0",
+  "description": "Local-first tab capture and restore for Chrome.",
+  "action": {
+    "default_title": "TabVault",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "permissions": ["tabs", "storage", "contextMenus", "notifications"],
+  "commands": {
+    "capture-current-window": {
+      "suggested_key": {
+        "default": "Alt+Shift+1",
+        "mac": "Option+Shift+1"
+      },
+      "description": "Capture tabs from the current window"
+    },
+    "open-manager": {
+      "suggested_key": {
+        "default": "Alt+Shift+2",
+        "mac": "Option+Shift+2"
+      },
+      "description": "Open the TabVault manager"
+    }
+  }
+}

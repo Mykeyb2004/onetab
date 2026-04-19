@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="TabVault">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182126" />
+      <stop offset="100%" stop-color="#8a5b24" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#bg)" />
+  <path
+    d="M27 38h74v12H27zM27 58h54v12H27zM27 78h42v12H27z"
+    fill="#fbf6ec"
+    opacity="0.92"
+  />
+  <path
+    d="M83 55l18 18-22 23-11-11 15-15-7-7z"
+    fill="#f0d8b2"
+  />
+</svg>
