@@ -48,9 +48,19 @@ export async function appendSessionGroup(
   group: SessionGroup
 ): Promise<RootState> {
   const state = await readRootState(storage);
+  const activeSortOrders = state.sessions
+    .filter((session) => !session.trashedAt)
+    .map((session) => session.sortOrder)
+    .filter((sortOrder): sortOrder is number => typeof sortOrder === "number");
+  const nextTopSortOrder =
+    activeSortOrders.length > 0 ? Math.min(...activeSortOrders) - 1 : 0;
+  const nextGroup: SessionGroup = {
+    ...group,
+    sortOrder: nextTopSortOrder
+  };
   const nextState: RootState = {
     ...state,
-    sessions: mergeSessionGroupsByTitle([group, ...state.sessions])
+    sessions: mergeSessionGroupsByTitle([nextGroup, ...state.sessions])
   };
 
   await writeRootState(storage, nextState);

@@ -54,6 +54,10 @@ export function mergeSessionGroupsByTitle(sessionGroups: SessionGroup[]): Sessio
         Date.parse(existingSessionGroup.updatedAt) >= Date.parse(sessionGroup.updatedAt)
           ? existingSessionGroup.updatedAt
           : sessionGroup.updatedAt,
+      sortOrder:
+        typeof existingSessionGroup.sortOrder === "number" && typeof sessionGroup.sortOrder === "number"
+          ? Math.min(existingSessionGroup.sortOrder, sessionGroup.sortOrder)
+          : existingSessionGroup.sortOrder ?? sessionGroup.sortOrder,
       pinned: existingSessionGroup.pinned || sessionGroup.pinned,
       sourceWindowId: existingSessionGroup.sourceWindowId ?? sessionGroup.sourceWindowId,
       tabCount: mergedTabs.length,

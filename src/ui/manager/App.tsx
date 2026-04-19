@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { downloadArtifact, readFileAsText } from "../../adapters/browser/file-transfer";
 import { emptyTrash } from "../../features/sessions/empty-trash";
+import { createEmptySessionGroup } from "../../features/sessions/create-empty-session-group";
 import { deleteSavedTab } from "../../features/sessions/delete-saved-tab";
 import { deleteSessionGroup } from "../../features/sessions/delete-session-group";
 import { deleteSessionGroupPermanently } from "../../features/sessions/delete-session-group-permanently";
@@ -13,8 +14,10 @@ import {
   importTextContent
 } from "../../features/sessions/import-sessions";
 import { listSessionGroups } from "../../features/sessions/list-session-groups";
+import { moveSavedTabToSessionGroup } from "../../features/sessions/move-saved-tab-to-session-group";
 import { openSavedTab } from "../../features/sessions/open-saved-tab";
 import { renameSessionGroup } from "../../features/sessions/rename-session-group";
+import { reorderSessionGroups } from "../../features/sessions/reorder-session-groups";
 import { restoreSavedTab } from "../../features/sessions/restore/restore-saved-tab";
 import { restoreSessionGroup } from "../../features/sessions/restore/restore-session-group";
 import { restoreSessionGroupFromTrash } from "../../features/sessions/restore-session-group-from-trash";
@@ -27,10 +30,17 @@ import type { SessionGroup } from "../../types/session";
 import { AppShell } from "../shared/AppShell";
 
 type SessionBucket = "active" | "trash";
+const SESSION_DRAG_TYPE = "application/x-tabvault-session";
+const TAB_DRAG_TYPE = "application/x-tabvault-tab";
 
 interface SessionCollections {
   activeSessions: SessionGroup[];
   trashedSessions: SessionGroup[];
+}
+
+interface DraggedTabPayload {
+  sourceSessionId: string;
+  tabId: string;
 }
 
 function formatRelativeSessionTime(isoString: string): string {
@@ -117,6 +127,10 @@ export function ManagerApp() {
   const [showMoreActions, setShowMoreActions] = useState(false);
   const [isActiveExpanded, setIsActiveExpanded] = useState(true);
   const [isTrashExpanded, setIsTrashExpanded] = useState(true);
+  const [openSessionMenuId, setOpenSessionMenuId] = useState<string | null>(null);
+  const [dragOverSessionId, setDragOverSessionId] = useState<string | null>(null);
+  const [draggedSessionId, setDraggedSessionId] = useState<string | null>(null);
+  const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const allSessions = useMemo(
@@ -139,10 +153,12 @@ export function ManagerApp() {
     0
   );
 
-  async function loadSessionCollections(
+  const liveStatusMessage = error ?? status;
+
+  const loadSessionCollections = useCallback(async (
     preferredBucket: SessionBucket = selectedBucket,
     preferredSessionId: string | null = selectedSessionId
-  ) {
+  ) => {
     try {
       const nextCollections = await listSessionGroups();
       const nextSelection = buildSelection(nextCollections, preferredBucket, preferredSessionId);
@@ -158,7 +174,7 @@ export function ManagerApp() {
           : "无法从本地存储中读取 TabVault 分组。"
       );
     }
-  }
+  }, [selectedBucket, selectedSessionId]);
 
   useEffect(() => {
     let alive = true;
@@ -223,17 +239,19 @@ export function ManagerApp() {
     return () => {
       chrome.storage.onChanged.removeListener(handleStorageChange);
     };
-  }, [selectedBucket, selectedSessionId]);
+  }, [loadSessionCollections]);
 
   function selectBucket(bucket: SessionBucket) {
     const sessions = bucket === "trash" ? sessionCollections.trashedSessions : sessionCollections.activeSessions;
     setShowMoreActions(false);
+    setOpenSessionMenuId(null);
     setSelectedBucket(bucket);
     setSelectedSessionId(sessions[0]?.id ?? null);
   }
 
   function selectSession(bucket: SessionBucket, sessionId: string) {
     setShowMoreActions(false);
+    setOpenSessionMenuId(null);
     setSelectedBucket(bucket);
     setSelectedSessionId(sessionId);
   }
@@ -247,6 +265,7 @@ export function ManagerApp() {
 
     const bucket: SessionBucket = isSessionGroupTrashed(matchedSession) ? "trash" : "active";
     setShowMoreActions(false);
+    setOpenSessionMenuId(null);
     setSelectedBucket(bucket);
     setSelectedSessionId(matchedSession.id);
     document.getElementById(`session-node-${matchedSession.id}`)?.scrollIntoView({
@@ -305,6 +324,7 @@ export function ManagerApp() {
     }
 
     setBusyKey(`rename:${sessionId}`);
+    setOpenSessionMenuId(null);
 
     try {
       await renameSessionGroup(sessionId, nextTitle);
@@ -317,8 +337,29 @@ export function ManagerApp() {
     }
   }
 
+  async function handleCreateGroup() {
+    const nextTitle = window.prompt("新建分组", "新分组");
+
+    if (nextTitle === null) {
+      return;
+    }
+
+    setBusyKey("create-group");
+
+    try {
+      const sessionGroup = await createEmptySessionGroup(nextTitle);
+      setStatus(`已创建分组“${sessionGroup.title}”。`);
+      await loadSessionCollections("active", sessionGroup.id);
+    } catch (nextError: unknown) {
+      setStatus(nextError instanceof Error ? nextError.message : "新建分组失败。");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   async function handleTogglePin(sessionId: string) {
     setBusyKey(`pin:${sessionId}`);
+    setOpenSessionMenuId(null);
 
     try {
       const updatedSession = await togglePinSessionGroup(sessionId);
@@ -339,6 +380,7 @@ export function ManagerApp() {
     }
 
     setBusyKey(`trash:${sessionId}`);
+    setOpenSessionMenuId(null);
 
     try {
       await deleteSessionGroup(sessionId);
@@ -353,6 +395,7 @@ export function ManagerApp() {
 
   async function handleRestoreGroupFromTrash(sessionId: string) {
     setBusyKey(`restore-trash:${sessionId}`);
+    setOpenSessionMenuId(null);
 
     try {
       const restoredSession = await restoreSessionGroupFromTrash(sessionId);
@@ -373,6 +416,7 @@ export function ManagerApp() {
     }
 
     setBusyKey(`permanent-delete:${sessionId}`);
+    setOpenSessionMenuId(null);
 
     try {
       await deleteSessionGroupPermanently(sessionId);
@@ -393,6 +437,7 @@ export function ManagerApp() {
     }
 
     setBusyKey("empty-trash");
+    setOpenSessionMenuId(null);
 
     try {
       const removedCount = await emptyTrash();
@@ -426,6 +471,121 @@ export function ManagerApp() {
       setStatus(nextError instanceof Error ? nextError.message : "删除标签页失败。");
     } finally {
       setBusyKey(null);
+    }
+  }
+
+  async function handleMoveTabToSessionGroup(
+    sourceSessionId: string,
+    tabId: string,
+    targetSessionId: string
+  ) {
+    setBusyKey(`move-tab:${tabId}`);
+
+    try {
+      const result = await moveSavedTabToSessionGroup(sourceSessionId, tabId, targetSessionId);
+      setStatus(result.message);
+      await loadSessionCollections("active", targetSessionId);
+    } catch (nextError: unknown) {
+      setStatus(nextError instanceof Error ? nextError.message : "移动标签页失败。");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function handleReorderSessionGroup(
+    sourceSessionId: string,
+    targetSessionId: string
+  ) {
+    setBusyKey(`reorder:${sourceSessionId}`);
+
+    try {
+      await reorderSessionGroups(sourceSessionId, targetSessionId);
+      setStatus("已更新分组顺序。");
+      await loadSessionCollections("active", targetSessionId);
+    } catch (nextError: unknown) {
+      setStatus(nextError instanceof Error ? nextError.message : "更新分组顺序失败。");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  function clearDragState() {
+    setDragOverSessionId(null);
+    setDraggedSessionId(null);
+    setDraggedTabId(null);
+  }
+
+  function handleSessionDragStart(
+    event: React.DragEvent<HTMLButtonElement>,
+    sessionId: string
+  ) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(SESSION_DRAG_TYPE, sessionId);
+    setDraggedSessionId(sessionId);
+    setShowMoreActions(false);
+  }
+
+  function handleTabDragStart(
+    event: React.DragEvent<HTMLDivElement>,
+    sourceSessionId: string,
+    tabId: string
+  ) {
+    const payload: DraggedTabPayload = {
+      sourceSessionId,
+      tabId
+    };
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(TAB_DRAG_TYPE, JSON.stringify(payload));
+    setDraggedTabId(tabId);
+  }
+
+  function handleSessionDragOver(
+    event: React.DragEvent<HTMLElement>,
+    targetSessionId: string
+  ) {
+    if (selectedBucket !== "active") {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverSessionId(targetSessionId);
+  }
+
+  function handleSessionDragLeave() {
+    setDragOverSessionId(null);
+  }
+
+  async function handleSessionDrop(
+    event: React.DragEvent<HTMLElement>,
+    targetSessionId: string
+  ) {
+    event.preventDefault();
+
+    const droppedSessionId = event.dataTransfer.getData(SESSION_DRAG_TYPE);
+    const droppedTabPayloadRaw = event.dataTransfer.getData(TAB_DRAG_TYPE);
+
+    clearDragState();
+
+    if (droppedSessionId) {
+      await handleReorderSessionGroup(droppedSessionId, targetSessionId);
+      return;
+    }
+
+    if (!droppedTabPayloadRaw) {
+      return;
+    }
+
+    try {
+      const droppedTabPayload = JSON.parse(droppedTabPayloadRaw) as DraggedTabPayload;
+      await handleMoveTabToSessionGroup(
+        droppedTabPayload.sourceSessionId,
+        droppedTabPayload.tabId,
+        targetSessionId
+      );
+    } catch {
+      setStatus("无法识别拖拽过来的标签页数据。");
     }
   }
 
@@ -486,16 +646,16 @@ export function ManagerApp() {
     importInputRef.current?.click();
   }
 
+  function toggleSessionMenu(sessionId: string) {
+    setOpenSessionMenuId((current) => (current === sessionId ? null : sessionId));
+  }
+
   async function handleOpenOptions() {
     await chrome.runtime.openOptionsPage();
   }
 
   function handleOpenHelp() {
     window.open(chrome.runtime.getURL("help.html"), "_blank");
-  }
-
-  function handleShowPrivacyInfo() {
-    setStatus("TabVault 当前是本地优先模式：标签元数据仅保存在本机，不上传服务端。");
   }
 
   async function handleBackupSync() {
@@ -534,8 +694,8 @@ export function ManagerApp() {
         </div>
 
         <div className="manager-links">
-          <button className="manager-link" onClick={handleShowPrivacyInfo} type="button">
-            隐私优先
+          <button className="manager-link" onClick={() => void handleCreateGroup()} type="button">
+            新建分组
           </button>
           <button className="manager-link" onClick={() => void handleBackupSync()} type="button">
             备份与同步
@@ -595,9 +755,8 @@ export function ManagerApp() {
         </div>
       ) : null}
 
-      <div className="manager-status card">
-        <strong>状态</strong>
-        <p className="muted">{error ?? status}</p>
+      <div aria-live="polite" className="visually-hidden">
+        {liveStatusMessage}
       </div>
 
       <div className="manager-workbench">
@@ -627,18 +786,62 @@ export function ManagerApp() {
               <ul className="manager-tree__children">
                 {sessionCollections.activeSessions.map((session) => (
                   <li key={session.id}>
-                    <button
-                      className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "active" ? "manager-tree__node--selected" : ""}`}
-                      id={`session-node-${session.id}`}
-                      onClick={() => selectSession("active", session.id)}
-                      type="button"
-                    >
-                      <span className="manager-tree__node-title">
-                        {session.pinned ? "📌 " : ""}
-                        {session.title}
-                      </span>
-                      <span className="manager-tree__count">{session.tabCount}</span>
-                    </button>
+                    <div className="manager-tree__node-row">
+                      <button
+                        className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "active" ? "manager-tree__node--selected" : ""} ${dragOverSessionId === session.id ? "manager-tree__node--drop-target" : ""} ${draggedSessionId === session.id ? "manager-tree__node--dragging" : ""}`}
+                        id={`session-node-${session.id}`}
+                        draggable
+                        onDragEnd={clearDragState}
+                        onDragLeave={handleSessionDragLeave}
+                        onDragOver={(event) => handleSessionDragOver(event, session.id)}
+                        onDragStart={(event) => handleSessionDragStart(event, session.id)}
+                        onDrop={(event) => void handleSessionDrop(event, session.id)}
+                        onClick={() => selectSession("active", session.id)}
+                        type="button"
+                      >
+                        <span className="manager-tree__node-title">
+                          {session.pinned ? "📌 " : ""}
+                          {session.title}
+                        </span>
+                        <span className="manager-tree__count">{session.tabCount}</span>
+                      </button>
+                      <button
+                        aria-label={`更多操作：${session.title}`}
+                        className="manager-tree__menu-trigger"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleSessionMenu(session.id);
+                        }}
+                        type="button"
+                      >
+                        ⋯
+                      </button>
+                    </div>
+                    {openSessionMenuId === session.id ? (
+                      <div className="manager-tree__menu">
+                        <button
+                          className="manager-tree__menu-item"
+                          onClick={() => void handleRenameGroup(session.id, session.title)}
+                          type="button"
+                        >
+                          重命名
+                        </button>
+                        <button
+                          className="manager-tree__menu-item"
+                          onClick={() => void handleTogglePin(session.id)}
+                          type="button"
+                        >
+                          {session.pinned ? "取消固定" : "固定分组"}
+                        </button>
+                        <button
+                          className="manager-tree__menu-item"
+                          onClick={() => void handleMoveGroupToTrash(session.id)}
+                          type="button"
+                        >
+                          移到回收站
+                        </button>
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -670,15 +873,46 @@ export function ManagerApp() {
               <ul className="manager-tree__children">
                 {sessionCollections.trashedSessions.map((session) => (
                   <li key={session.id}>
-                    <button
-                      className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "trash" ? "manager-tree__node--selected" : ""}`}
-                      id={`session-node-${session.id}`}
-                      onClick={() => selectSession("trash", session.id)}
-                      type="button"
-                    >
-                      <span className="manager-tree__node-title">{session.title}</span>
-                      <span className="manager-tree__count">{session.tabCount}</span>
-                    </button>
+                    <div className="manager-tree__node-row">
+                      <button
+                        className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "trash" ? "manager-tree__node--selected" : ""}`}
+                        id={`session-node-${session.id}`}
+                        onClick={() => selectSession("trash", session.id)}
+                        type="button"
+                      >
+                        <span className="manager-tree__node-title">{session.title}</span>
+                        <span className="manager-tree__count">{session.tabCount}</span>
+                      </button>
+                      <button
+                        aria-label={`更多操作：${session.title}`}
+                        className="manager-tree__menu-trigger"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleSessionMenu(session.id);
+                        }}
+                        type="button"
+                      >
+                        ⋯
+                      </button>
+                    </div>
+                    {openSessionMenuId === session.id ? (
+                      <div className="manager-tree__menu">
+                        <button
+                          className="manager-tree__menu-item"
+                          onClick={() => void handleRestoreGroupFromTrash(session.id)}
+                          type="button"
+                        >
+                          恢复分组
+                        </button>
+                        <button
+                          className="manager-tree__menu-item"
+                          onClick={() => void handleDeleteSessionPermanently(session.id)}
+                          type="button"
+                        >
+                          永久删除
+                        </button>
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -864,7 +1098,13 @@ export function ManagerApp() {
 
               <div className="manager-tabs">
                 {selectedSession.tabs.map((savedTab) => (
-                  <div className="manager-tab" key={savedTab.id}>
+                  <div
+                    className={`manager-tab ${selectedBucket === "active" ? "manager-tab--draggable" : ""} ${draggedTabId === savedTab.id ? "manager-tab--dragging" : ""}`}
+                    draggable={selectedBucket === "active"}
+                    key={savedTab.id}
+                    onDragEnd={clearDragState}
+                    onDragStart={(event) => handleTabDragStart(event, selectedSession.id, savedTab.id)}
+                  >
                     <div className="manager-tab__icon">
                       {savedTab.favIconUrl ? (
                         <img alt="" src={savedTab.favIconUrl} />
@@ -877,7 +1117,7 @@ export function ManagerApp() {
                       <button
                         className="manager-tab__title"
                         disabled={busyKey !== null || selectedBucket === "trash"}
-                        onClick={() => void handleRestoreTab(selectedSession.id, savedTab.id)}
+                        onClick={() => void handleOpenTab(selectedSession.id, savedTab.id)}
                         type="button"
                       >
                         {savedTab.title}

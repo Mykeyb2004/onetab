@@ -357,8 +357,68 @@ select {
   background: rgba(24, 33, 38, 0.03);
 }
 
+.manager-tree__node-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
 .manager-tree__node--selected {
   background: rgba(138, 91, 36, 0.14);
+}
+
+.manager-tree__node--drop-target {
+  outline: 2px solid rgba(138, 91, 36, 0.45);
+  background: rgba(240, 216, 178, 0.4);
+}
+
+.manager-tree__node--dragging {
+  opacity: 0.5;
+}
+
+.manager-tree__menu-trigger {
+  appearance: none;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(24, 33, 38, 0.05);
+  color: #5f6a72;
+  cursor: pointer;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.manager-tree__menu-trigger:hover {
+  color: #182126;
+  background: rgba(138, 91, 36, 0.12);
+}
+
+.manager-tree__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  margin-left: 8px;
+  padding: 8px;
+  border: 1px solid rgba(24, 33, 38, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 20px rgba(24, 33, 38, 0.06);
+}
+
+.manager-tree__menu-item {
+  appearance: none;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #182126;
+  cursor: pointer;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.manager-tree__menu-item:hover {
+  background: rgba(138, 91, 36, 0.1);
 }
 
 .manager-main {
@@ -425,6 +485,14 @@ select {
   border-radius: 14px;
   background: rgba(24, 33, 38, 0.03);
   padding: 10px 12px;
+}
+
+.manager-tab--draggable {
+  cursor: grab;
+}
+
+.manager-tab--dragging {
+  opacity: 0.55;
 }
 
 .manager-tab__icon {

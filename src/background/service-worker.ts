@@ -263,11 +263,8 @@ async function ensureContextMenus(): Promise<void> {
 }
 
 async function syncActionPopup(): Promise<void> {
-  const state = await readRootState(chromeLocalStorage);
-  const popupAction = state.settings.defaultClickAction;
-
   await chrome.action.setPopup({
-    popup: `popup.html?action=${popupAction}`
+    popup: "popup.html"
   });
 }
 

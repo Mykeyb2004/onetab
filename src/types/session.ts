@@ -14,6 +14,7 @@ export interface SessionGroup {
   createdAt: string;
   updatedAt: string;
   trashedAt: string | null;
+  sortOrder?: number;
   tabCount: number;
   pinned: boolean;
   sourceWindowId: number | null;

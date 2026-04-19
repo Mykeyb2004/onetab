@@ -3,7 +3,7 @@ import {
   loadSettings
 } from "../../features/settings/load-settings";
 import { saveSettings } from "../../features/settings/save-settings";
-import type { DefaultClickAction, ExtensionSettings, RestoreBehavior } from "../../types/settings";
+import type { ExtensionSettings, RestoreBehavior } from "../../types/settings";
 import { AppShell } from "../shared/AppShell";
 
 export function OptionsApp() {
@@ -41,7 +41,7 @@ export function OptionsApp() {
     <AppShell
       eyebrow="Options"
       title="Settings"
-      description="The scaffold already persists restore behavior, default click action, feedback visibility, and context-menu configuration."
+      description="调整 TabVault 的恢复策略、通知反馈和右键菜单行为。"
     >
       <div className="card stack">
         <strong>Status</strong>
@@ -64,23 +64,6 @@ export function OptionsApp() {
             >
               <option value="remove-group">Remove group after restore</option>
               <option value="keep-group">Keep group after restore</option>
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="default-click-action">Default action</label>
-            <select
-              id="default-click-action"
-              value={settings.defaultClickAction}
-              onChange={(event) =>
-                persistSettings({
-                  ...settings,
-                  defaultClickAction: event.target.value as DefaultClickAction
-                })
-              }
-            >
-              <option value="capture-current-window">Capture current window</option>
-              <option value="open-manager">Open manager</option>
             </select>
           </div>
 

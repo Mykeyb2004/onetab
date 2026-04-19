@@ -82,6 +82,8 @@ function normalizeSessions(input: unknown): SessionGroup[] {
         createdAt,
         updatedAt,
         trashedAt: typeof rawSession.trashedAt === "string" ? rawSession.trashedAt : null,
+        sortOrder:
+          typeof rawSession.sortOrder === "number" ? rawSession.sortOrder : Date.parse(updatedAt),
         tabCount: tabs.length,
         pinned: Boolean(rawSession.pinned),
         sourceWindowId: typeof rawSession.sourceWindowId === "number" ? rawSession.sourceWindowId : null,
