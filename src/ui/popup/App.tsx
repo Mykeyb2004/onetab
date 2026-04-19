@@ -33,11 +33,7 @@ export function PopupApp() {
   }
 
   return (
-    <AppShell
-      eyebrow="Popup"
-      title="TabVault"
-      description="点击扩展图标后只打开这个面板，不会默认自动收纳当前窗口。"
-    >
+    <AppShell title="TabVault">
       <div className="card stack">
         <div className="grid grid--actions">
           {actionButtons.map((button) => (
@@ -54,9 +50,8 @@ export function PopupApp() {
         </div>
       </div>
 
-      <div className="card status">
-        <strong>Status</strong>
-        <p className="muted">{status}</p>
+      <div aria-live="polite" className="visually-hidden">
+        {status}
       </div>
     </AppShell>
   );

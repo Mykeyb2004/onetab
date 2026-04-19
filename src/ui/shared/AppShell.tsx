@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import "./app-shell.css";
 
 interface AppShellProps {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  description: string;
+  description?: string;
   children: ReactNode;
 }
 
@@ -17,9 +17,9 @@ export function AppShell({
   return (
     <main className="app-shell">
       <header className="app-shell__header">
-        <p className="app-shell__eyebrow">{eyebrow}</p>
+        {eyebrow ? <p className="app-shell__eyebrow">{eyebrow}</p> : null}
         <h1 className="app-shell__title">{title}</h1>
-        <p className="app-shell__description">{description}</p>
+        {description ? <p className="app-shell__description">{description}</p> : null}
       </header>
       <section className="app-shell__body">{children}</section>
     </main>
