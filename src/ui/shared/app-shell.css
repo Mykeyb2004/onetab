@@ -489,6 +489,10 @@ select {
   padding-top: 16px;
 }
 
+.manager-tabs__hint {
+  margin: 0;
+}
+
 .manager-tabs {
   display: flex;
   flex-direction: column;
@@ -511,6 +515,26 @@ select {
 
 .manager-tab--dragging {
   opacity: 0.55;
+}
+
+.manager-tab--drop-target {
+  outline: 2px solid rgba(138, 91, 36, 0.45);
+  background: rgba(240, 216, 178, 0.38);
+}
+
+.manager-tabs__dropzone {
+  border: 1px dashed rgba(138, 91, 36, 0.36);
+  border-radius: 14px;
+  background: rgba(240, 216, 178, 0.18);
+  color: #5f6a72;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.manager-tabs__dropzone--active {
+  border-color: rgba(138, 91, 36, 0.72);
+  background: rgba(240, 216, 178, 0.46);
+  color: #182126;
 }
 
 .manager-tab__icon {

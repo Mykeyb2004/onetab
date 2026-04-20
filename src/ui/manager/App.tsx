@@ -14,8 +14,8 @@ import {
   importTextContent
 } from "../../features/sessions/import-sessions";
 import { listSessionGroups } from "../../features/sessions/list-session-groups";
-import { moveSavedTabToSessionGroup } from "../../features/sessions/move-saved-tab-to-session-group";
 import { openSavedTab } from "../../features/sessions/open-saved-tab";
+import { repositionSavedTab } from "../../features/sessions/reposition-saved-tab";
 import { renameSessionGroup } from "../../features/sessions/rename-session-group";
 import { reorderSessionGroups } from "../../features/sessions/reorder-session-groups";
 import { restoreSavedTab } from "../../features/sessions/restore/restore-saved-tab";
@@ -112,6 +112,33 @@ function buildSelection(
   };
 }
 
+function parseDraggedTabPayload(rawPayload: string): DraggedTabPayload | null {
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const payload: unknown = JSON.parse(rawPayload);
+
+    if (typeof payload !== "object" || payload === null) {
+      return null;
+    }
+
+    const candidate = payload as Record<string, unknown>;
+
+    if (typeof candidate.sourceSessionId !== "string" || typeof candidate.tabId !== "string") {
+      return null;
+    }
+
+    return {
+      sourceSessionId: candidate.sourceSessionId,
+      tabId: candidate.tabId
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function ManagerApp() {
   const [sessionCollections, setSessionCollections] = useState<SessionCollections>({
     activeSessions: [],
@@ -129,8 +156,10 @@ export function ManagerApp() {
   const [isTrashExpanded, setIsTrashExpanded] = useState(true);
   const [openSessionMenuId, setOpenSessionMenuId] = useState<string | null>(null);
   const [dragOverSessionId, setDragOverSessionId] = useState<string | null>(null);
+  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
   const [draggedSessionId, setDraggedSessionId] = useState<string | null>(null);
   const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
+  const [isTabDropAtEnd, setIsTabDropAtEnd] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const allSessions = useMemo(
@@ -474,15 +503,18 @@ export function ManagerApp() {
     }
   }
 
-  async function handleMoveTabToSessionGroup(
+  async function handleRepositionTab(
     sourceSessionId: string,
     tabId: string,
-    targetSessionId: string
+    targetSessionId: string,
+    targetTabId: string | null = null
   ) {
     setBusyKey(`move-tab:${tabId}`);
 
     try {
-      const result = await moveSavedTabToSessionGroup(sourceSessionId, tabId, targetSessionId);
+      const result = await repositionSavedTab(sourceSessionId, tabId, targetSessionId, {
+        targetTabId
+      });
       setStatus(result.message);
       await loadSessionCollections("active", targetSessionId);
     } catch (nextError: unknown) {
@@ -511,8 +543,10 @@ export function ManagerApp() {
 
   function clearDragState() {
     setDragOverSessionId(null);
+    setDragOverTabId(null);
     setDraggedSessionId(null);
     setDraggedTabId(null);
+    setIsTabDropAtEnd(false);
   }
 
   function handleSessionDragStart(
@@ -522,6 +556,9 @@ export function ManagerApp() {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(SESSION_DRAG_TYPE, sessionId);
     setDraggedSessionId(sessionId);
+    setDraggedTabId(null);
+    setDragOverTabId(null);
+    setIsTabDropAtEnd(false);
     setShowMoreActions(false);
   }
 
@@ -538,6 +575,8 @@ export function ManagerApp() {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(TAB_DRAG_TYPE, JSON.stringify(payload));
     setDraggedTabId(tabId);
+    setDraggedSessionId(null);
+    setDragOverSessionId(null);
   }
 
   function handleSessionDragOver(
@@ -551,6 +590,8 @@ export function ManagerApp() {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
     setDragOverSessionId(targetSessionId);
+    setDragOverTabId(null);
+    setIsTabDropAtEnd(false);
   }
 
   function handleSessionDragLeave() {
@@ -577,16 +618,60 @@ export function ManagerApp() {
       return;
     }
 
-    try {
-      const droppedTabPayload = JSON.parse(droppedTabPayloadRaw) as DraggedTabPayload;
-      await handleMoveTabToSessionGroup(
-        droppedTabPayload.sourceSessionId,
-        droppedTabPayload.tabId,
-        targetSessionId
-      );
-    } catch {
+    const droppedTabPayload = parseDraggedTabPayload(droppedTabPayloadRaw);
+
+    if (!droppedTabPayload) {
       setStatus("无法识别拖拽过来的标签页数据。");
+      return;
     }
+
+    await handleRepositionTab(
+      droppedTabPayload.sourceSessionId,
+      droppedTabPayload.tabId,
+      targetSessionId
+    );
+  }
+
+  function handleTabDragOver(
+    event: React.DragEvent<HTMLElement>,
+    targetSessionId: string,
+    targetTabId: string | null
+  ) {
+    if (selectedBucket !== "active" || !draggedTabId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverSessionId(null);
+    setDragOverTabId(targetTabId);
+    setIsTabDropAtEnd(targetTabId === null && targetSessionId === selectedSessionId);
+  }
+
+  async function handleTabDrop(
+    event: React.DragEvent<HTMLElement>,
+    targetSessionId: string,
+    targetTabId: string | null
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const droppedTabPayload = parseDraggedTabPayload(event.dataTransfer.getData(TAB_DRAG_TYPE));
+
+    clearDragState();
+
+    if (!droppedTabPayload) {
+      setStatus("无法识别拖拽过来的标签页数据。");
+      return;
+    }
+
+    await handleRepositionTab(
+      droppedTabPayload.sourceSessionId,
+      droppedTabPayload.tabId,
+      targetSessionId,
+      targetTabId
+    );
   }
 
   async function handleExportAll(format: "json" | "text") {
@@ -1096,14 +1181,22 @@ export function ManagerApp() {
                 </div>
               ) : null}
 
+              {selectedBucket === "active" ? (
+                <p className="muted manager-tabs__hint">
+                  拖拽标签可调整组内顺序，拖到左侧分组可跨组移动。
+                </p>
+              ) : null}
+
               <div className="manager-tabs">
                 {selectedSession.tabs.map((savedTab) => (
                   <div
-                    className={`manager-tab ${selectedBucket === "active" ? "manager-tab--draggable" : ""} ${draggedTabId === savedTab.id ? "manager-tab--dragging" : ""}`}
+                    className={`manager-tab ${selectedBucket === "active" ? "manager-tab--draggable" : ""} ${draggedTabId === savedTab.id ? "manager-tab--dragging" : ""} ${dragOverTabId === savedTab.id ? "manager-tab--drop-target" : ""}`}
                     draggable={selectedBucket === "active"}
                     key={savedTab.id}
                     onDragEnd={clearDragState}
+                    onDragOver={(event) => handleTabDragOver(event, selectedSession.id, savedTab.id)}
                     onDragStart={(event) => handleTabDragStart(event, selectedSession.id, savedTab.id)}
+                    onDrop={(event) => void handleTabDrop(event, selectedSession.id, savedTab.id)}
                   >
                     <div className="manager-tab__icon">
                       {savedTab.favIconUrl ? (
@@ -1159,6 +1252,16 @@ export function ManagerApp() {
                     </div>
                   </div>
                 ))}
+                {selectedBucket === "active" ? (
+                  <div
+                    aria-label="拖拽记录到当前分组末尾"
+                    className={`manager-tabs__dropzone ${isTabDropAtEnd ? "manager-tabs__dropzone--active" : ""}`}
+                    onDragOver={(event) => handleTabDragOver(event, selectedSession.id, null)}
+                    onDrop={(event) => void handleTabDrop(event, selectedSession.id, null)}
+                  >
+                    {selectedSession.tabs.length === 0 ? "拖入记录到此分组" : "拖到这里放到末尾"}
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : (

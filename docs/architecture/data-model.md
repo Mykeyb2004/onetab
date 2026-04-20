@@ -1,10 +1,12 @@
 # Data Model
 
 - Scope: TabVault 的 root state、导入导出结构和附加持久化配置模型
-- Last updated: 2026-04-19
+- Last updated: 2026-04-20
 - Related files:
+  - `src/types/session.ts`
   - `src/storage/local/schema.ts`
   - `src/storage/root-state/config.ts`
+  - `src/domain/sessions/reposition-saved-tab.ts`
   - `src/types/settings.ts`
 
 ## 1. Root State
@@ -60,6 +62,8 @@ interface SessionGroup {
   title: string;
   createdAt: string;
   updatedAt: string;
+  trashedAt: string | null;
+  sortOrder?: number;
   tabCount: number;
   pinned: boolean;
   sourceWindowId: number | null;
@@ -77,6 +81,10 @@ interface SessionGroup {
   - 组首次创建时间
 - `updatedAt`
   - 组最近变更时间
+- `trashedAt`
+  - 非空时表示分组已进入回收站
+- `sortOrder`
+  - 用于持久化手动分组排序；`pinned` 分组仍优先于普通组展示
 - `tabCount`
   - 必须等于 `tabs.length`
 - `pinned`
@@ -108,7 +116,7 @@ interface SavedTab {
   - 初始为 `null`
   - 单标签或整组恢复后更新
 - `originalIndex`
-  - 用于整组恢复时保持顺序
+  - 用于持久化组内当前顺序，并作为整组恢复的打开顺序
 
 ## 4. ExtensionSettings
 
@@ -191,6 +199,7 @@ interface SearchHit {
 5. pinned 组始终排在普通组之前
 6. 恢复单个标签后，该标签从原组移除
 7. 恢复整组后，是否移除组由设置决定
+8. 手动拖拽排序后，受影响组内的 `originalIndex` 必须重新连续编号
 
 ## 8. Migration 规则
 

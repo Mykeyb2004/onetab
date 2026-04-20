@@ -28,6 +28,7 @@
 | JSON 导入导出 | Yes | Yes | Yes |
 | Text 导入 | Yes | Yes | Yes |
 | 设置读写 | Yes | Yes | Optional |
+| 拖拽调整组和标签顺序 | Yes | Yes | Optional |
 | Migration | Yes | Yes | No |
 
 ## 4. 必测用例
@@ -44,6 +45,8 @@
 - `should match search query against tab title and url`
 - `should skip invalid lines during text import`
 - `should reject unsupported json schema version`
+- `should reorder tabs within the same session when dropped before another tab`
+- `should move tabs between active sessions before a target tab`
 
 ### 4.2 Integration
 
@@ -53,6 +56,8 @@
 - `should keep group after restore when keep-group is enabled`
 - `should export only the target group in single-group export`
 - `should merge settings patch without touching sessions`
+- `should persist a reordered tab within the same session`
+- `should persist a moved tab before a target tab in another session`
 
 ### 4.3 E2E
 
