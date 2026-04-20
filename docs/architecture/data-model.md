@@ -1,5 +1,12 @@
 # Data Model
 
+- Scope: TabVault 的 root state、导入导出结构和附加持久化配置模型
+- Last updated: 2026-04-19
+- Related files:
+  - `src/storage/local/schema.ts`
+  - `src/storage/root-state/config.ts`
+  - `src/types/settings.ts`
+
 ## 1. Root State
 
 MVP 持久化数据统一收敛到单一 root state：
@@ -17,6 +24,33 @@ interface RootState {
 - 读取路径简单
 - migration 单入口
 - 导入导出容易建立版本约束
+
+## 1.1 Root State Storage Config
+
+root state 之外，扩展还需要维护一个存储配置对象：
+
+```ts
+type RootStateStorageConfig =
+  | {
+      backend: "chrome-local";
+      fileName: string;
+      syncRevision: number;
+      updatedAt: string;
+    }
+  | {
+      backend: "directory";
+      directoryName: string;
+      fileName: string;
+      syncRevision: number;
+      updatedAt: string;
+    };
+```
+
+规则：
+
+- 该对象保存在 `chrome.storage.local`
+- `syncRevision` 用于跨页面和 background 的变更通知
+- 目录句柄本身不放进该对象，而是保存在 IndexedDB
 
 ## 2. SessionGroup
 

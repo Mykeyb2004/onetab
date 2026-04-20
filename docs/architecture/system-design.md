@@ -1,5 +1,13 @@
 # System Design
 
+- Scope: TabVault MVP 运行时分层、状态边界与持久化职责
+- Last updated: 2026-04-19
+- Related files:
+  - `src/adapters/chrome/storage.ts`
+  - `src/storage/local/repository.ts`
+  - `src/storage/root-state/config.ts`
+  - `src/storage/file-system/repository.ts`
+
 ## 1. 目标
 
 本设计用于指导 TabVault MVP 的实现，覆盖以下目标：
@@ -9,7 +17,7 @@
 - 支持恢复单个标签并从原组移除
 - 支持搜索组名、标签标题、URL
 - 支持本地导入导出
-- 默认仅依赖 `chrome.storage.local`
+- 默认使用 `chrome.storage.local`，并允许用户切换到自选目录
 
 ## 2. 运行时组件
 
@@ -63,6 +71,8 @@
 - 持久化 root state
 - 负责 schema migration
 - 负责导入导出的结构兼容
+- 负责选择当前激活的持久化后端
+- 在目录后端下协调文件句柄、权限校验和同步信号
 
 ## 3. 分层设计
 
@@ -122,11 +132,20 @@ UI 只负责：
 
 ### 4.1 持久化状态
 
-保存在 `chrome.storage.local`：
+root state 保存在当前激活后端：
 
 - session groups
 - settings
 - schema version
+
+始终保存在 `chrome.storage.local`：
+
+- 当前 root state 存储后端配置
+- 跨页面同步 revision
+
+目录后端附加保存在 IndexedDB：
+
+- 用户选择的目录句柄
 
 ### 4.2 瞬时状态
 
@@ -184,7 +203,7 @@ MVP 只申请当前功能必须权限，不提前为未来功能申请。
 
 ## 7. 未来扩展点
 
-- 切换到 IndexedDB
+- 切换 root state 主数据到 IndexedDB
 - 云同步
 - 分享只读页面
 - Side Panel

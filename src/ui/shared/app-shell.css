@@ -47,6 +47,20 @@ select {
   gap: 10px;
 }
 
+.app-shell__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-shell__title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
 .app-shell__eyebrow {
   margin: 0;
   font-size: 12px;
@@ -60,6 +74,18 @@ select {
   margin: 0;
   font-size: 28px;
   line-height: 1.1;
+}
+
+.app-shell__title-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.app-shell__header-actions {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .app-shell__description {
@@ -120,6 +146,12 @@ select {
 .button:hover {
   opacity: 0.92;
   transform: translateY(-1px);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
 }
 
 .button--secondary {
@@ -206,43 +238,29 @@ select {
   flex-wrap: wrap;
 }
 
-.manager-topbar {
-  display: grid;
+.manager-header-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   gap: 18px;
-  grid-template-columns: 260px minmax(0, 1fr) auto;
-  align-items: center;
-}
-
-.manager-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
   min-width: 0;
 }
 
-.manager-brand__logo {
-  width: 56px;
-  height: 56px;
-  flex: 0 0 auto;
+.manager-title-icon {
+  width: 34px;
+  height: 34px;
+  display: block;
 }
 
-.manager-brand__copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.manager-brand__title {
-  font-size: 34px;
-  font-weight: 400;
-  letter-spacing: -0.03em;
+.manager-search {
+  flex: 1 1 320px;
+  max-width: 520px;
 }
 
 .manager-search input {
-  min-height: 58px;
-  border-radius: 24px;
-  padding-inline: 18px;
+  min-height: 48px;
+  border-radius: 18px;
+  padding-inline: 16px;
 }
 
 .manager-links {
@@ -569,6 +587,20 @@ select {
   font-weight: 600;
 }
 
+.field__value {
+  border: 1px solid rgba(24, 33, 38, 0.12);
+  border-radius: 12px;
+  background: rgba(24, 33, 38, 0.04);
+  padding: 10px 12px;
+}
+
+.field__hint {
+  margin: 0;
+  color: #5f6a72;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -611,13 +643,28 @@ select {
     padding: 18px;
   }
 
+  .app-shell__title-row,
+  .manager-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .app-shell__header-actions,
+  .manager-search {
+    width: 100%;
+    max-width: none;
+  }
+
+  .manager-links {
+    justify-content: flex-start;
+  }
+
   .session-card__header,
   .tab-row {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .manager-topbar,
   .manager-workbench,
   .manager-detail__meta-row,
   .manager-detail__header,

@@ -1,6 +1,6 @@
 import { chromeNotificationsAdapter } from "../adapters/chrome/notifications";
 import { chromeTabsAdapter, toBrowserTab } from "../adapters/chrome/tabs";
-import { chromeLocalStorage } from "../adapters/chrome/storage";
+import { chromeLocalStorage, chromeStorageLocalArea } from "../adapters/chrome/storage";
 import { executeCaptureRuntimeAction } from "./execute-capture-runtime-action";
 import { captureBrowserTab } from "../features/sessions/capture/capture-browser-tab";
 import { captureBrowserTabs } from "../features/sessions/capture/capture-tabs";
@@ -19,8 +19,11 @@ import {
 import { splitSessionGroups } from "../domain/sessions/session-groups";
 import { sortSessionGroups } from "../domain/sessions/sort-session-groups";
 import { bootstrapRootState, readRootState } from "../storage/local/repository";
+import {
+  bootstrapRootStateStorageConfig,
+  ROOT_STATE_STORAGE_CONFIG_KEY
+} from "../storage/root-state/config";
 import type { RuntimeMessage, RuntimeResponse } from "../shared/messages";
-import { ROOT_STORAGE_KEY, type RootState } from "../storage/local/schema";
 import type { BrowserTab } from "../types/browser";
 import type { SessionGroup } from "../types/session";
 
@@ -287,13 +290,6 @@ function scheduleRuntimeBehaviorSync(): Promise<void> {
   return runtimeBehaviorSyncQueue;
 }
 
-function didSettingsChange(previousState: unknown, nextState: unknown): boolean {
-  const previousSettings = (previousState as RootState | undefined)?.settings;
-  const nextSettings = (nextState as RootState | undefined)?.settings;
-
-  return JSON.stringify(previousSettings) !== JSON.stringify(nextSettings);
-}
-
 const captureDependencies = {
   storage: chromeLocalStorage,
   tabs: chromeTabsAdapter,
@@ -373,11 +369,13 @@ async function handleRuntimeMessage(message: RuntimeMessage): Promise<RuntimeRes
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
+  await bootstrapRootStateStorageConfig(chromeStorageLocalArea);
   await bootstrapRootState(chromeLocalStorage);
   await scheduleRuntimeBehaviorSync();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
+  await bootstrapRootStateStorageConfig(chromeStorageLocalArea);
   await bootstrapRootState(chromeLocalStorage);
   await scheduleRuntimeBehaviorSync();
 });
@@ -496,17 +494,9 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     return;
   }
 
-  const rootStateChange = changes[ROOT_STORAGE_KEY];
-
-  if (!rootStateChange) {
+  if (!changes[ROOT_STATE_STORAGE_CONFIG_KEY]) {
     return;
   }
 
-  if (
-    didSettingsChange(rootStateChange.oldValue, rootStateChange.newValue) ||
-    JSON.stringify((rootStateChange.oldValue as RootState | undefined)?.sessions) !==
-      JSON.stringify((rootStateChange.newValue as RootState | undefined)?.sessions)
-  ) {
-    void scheduleRuntimeBehaviorSync();
-  }
+  void scheduleRuntimeBehaviorSync();
 });

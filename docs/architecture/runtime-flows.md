@@ -1,14 +1,23 @@
 # Runtime Flows
 
+- Scope: TabVault MVP 的关键运行时流程、失败处理与设置更新路径
+- Last updated: 2026-04-19
+- Related files:
+  - `src/background/service-worker.ts`
+  - `src/features/settings/persistence-directory.ts`
+  - `src/storage/root-state/config.ts`
+  - `src/storage/file-system/repository.ts`
+
 ## 1. Install / Startup
 
 ### Flow
 
 1. `chrome.runtime.onInstalled` 触发
-2. background 调用 `bootstrapRootState`
-3. storage 层读取 `chrome.storage.local`
-4. 若不存在 root state，则写入默认 root state
-5. 注册 context menus
+2. background 先引导 root state 存储配置
+3. background 调用 `bootstrapRootState`
+4. storage 层读取当前激活后端
+5. 若不存在 root state，则写入默认 root state
+6. 注册 context menus
 
 ### Failure Handling
 
@@ -167,3 +176,23 @@
 ### Notes
 
 - Options 页面永远只写 patch，不重写整个 root state 的其他部分
+
+## 12. Persistence Directory Switch
+
+### Flow
+
+1. 用户在 Options 页面点击选择目录
+2. 页面通过目录选择器获得 `FileSystemDirectoryHandle`
+3. storage 层检查所选目录中是否已有 `tabvault-data.json`
+4. 若已有文件，则直接切换并以该文件作为新的 root state 来源
+5. 若目录为空，则读取当前激活后端中的 root state，并用它初始化 `tabvault-data.json`
+6. 目录句柄写入 IndexedDB
+7. root state 存储配置写入 `chrome.storage.local`
+8. 清理 `chrome.storage.local` 中旧的 root state
+9. 通过同步 revision 通知 Manager、background 等上下文刷新
+
+### Failure Handling
+
+- 如果目录权限未授予，不切换后端
+- 如果当前 root state 无法读取，不允许静默迁移为新目录，避免状态分叉
+- 切回浏览器本地存储时，保留原目录中的文件副本，不做隐式删除

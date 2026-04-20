@@ -24,7 +24,7 @@ import { restoreSessionGroupFromTrash } from "../../features/sessions/restore-se
 import { searchSessions } from "../../features/sessions/search-sessions";
 import { togglePinSessionGroup } from "../../features/sessions/toggle-pin-session-group";
 import { isSessionGroupTrashed } from "../../domain/sessions/session-groups";
-import { ROOT_STORAGE_KEY } from "../../storage/local/schema";
+import { ROOT_STATE_STORAGE_CONFIG_KEY } from "../../storage/root-state/config";
 import type { SearchHit } from "../../types/search";
 import type { SessionGroup } from "../../types/session";
 import { AppShell } from "../shared/AppShell";
@@ -217,7 +217,7 @@ export function ManagerApp() {
       changes: Record<string, chrome.storage.StorageChange>,
       areaName: string
     ) {
-      if (areaName !== "local" || !changes[ROOT_STORAGE_KEY]) {
+      if (areaName !== "local" || !changes[ROOT_STATE_STORAGE_CONFIG_KEY]) {
         return;
       }
 
@@ -239,7 +239,7 @@ export function ManagerApp() {
     return () => {
       chrome.storage.onChanged.removeListener(handleStorageChange);
     };
-  }, [loadSessionCollections]);
+  }, [loadSessionCollections, selectedBucket, selectedSessionId]);
 
   function selectBucket(bucket: SessionBucket) {
     const sessions = bucket === "trash" ? sessionCollections.trashedSessions : sessionCollections.activeSessions;
@@ -669,53 +669,53 @@ export function ManagerApp() {
     <AppShell
       eyebrow="Manager"
       title="TabVault Manager"
-      description=""
-    >
-      <div className="manager-topbar card">
-        <div className="manager-brand">
-          <img alt="TabVault" className="manager-brand__logo" src={chrome.runtime.getURL("icon.svg")} />
-          <div className="manager-brand__copy">
-            <strong className="manager-brand__title">TabVault</strong>
-            <span className="muted">Session Manager</span>
+      titleIcon={
+        <img
+          alt="TabVault"
+          className="manager-title-icon"
+          src={chrome.runtime.getURL("icon.svg")}
+        />
+      }
+      headerActions={
+        <div className="manager-header-actions">
+          <div className="manager-search">
+            <label className="visually-hidden" htmlFor="manager-search">
+              搜索分组、标题或 URL
+            </label>
+            <input
+              id="manager-search"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索分组、标题或 URL"
+              type="search"
+              value={query}
+            />
+          </div>
+
+          <div className="manager-links">
+            <button className="manager-link" onClick={() => void handleCreateGroup()} type="button">
+              新建分组
+            </button>
+            <button className="manager-link" onClick={() => void handleBackupSync()} type="button">
+              备份与同步
+            </button>
+            <button className="manager-link" onClick={handleOpenHelp} type="button">
+              帮助
+            </button>
+            <button
+              className={`manager-link ${showImportExportTools ? "manager-link--active" : ""}`}
+              onClick={() => setShowImportExportTools((current) => !current)}
+              type="button"
+            >
+              导入与导出
+            </button>
+            <button className="manager-link" onClick={() => void handleOpenOptions()} type="button">
+              选项
+            </button>
           </div>
         </div>
-
-        <div className="manager-search">
-          <label className="visually-hidden" htmlFor="manager-search">
-            搜索分组、标题或 URL
-          </label>
-          <input
-            id="manager-search"
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索分组、标题或 URL"
-            type="search"
-            value={query}
-          />
-        </div>
-
-        <div className="manager-links">
-          <button className="manager-link" onClick={() => void handleCreateGroup()} type="button">
-            新建分组
-          </button>
-          <button className="manager-link" onClick={() => void handleBackupSync()} type="button">
-            备份与同步
-          </button>
-          <button className="manager-link" onClick={handleOpenHelp} type="button">
-            帮助
-          </button>
-          <button
-            className={`manager-link ${showImportExportTools ? "manager-link--active" : ""}`}
-            onClick={() => setShowImportExportTools((current) => !current)}
-            type="button"
-          >
-            导入与导出
-          </button>
-          <button className="manager-link" onClick={() => void handleOpenOptions()} type="button">
-            选项
-          </button>
-        </div>
-      </div>
-
+      }
+      description=""
+    >
       {showImportExportTools ? (
         <div className="card stack">
           <strong>导入与导出</strong>

@@ -1,5 +1,13 @@
 # Permissions And Security
 
+- Scope: TabVault MVP 的权限边界、数据落盘边界与风险控制
+- Last updated: 2026-04-19
+- Related files:
+  - `public/manifest.json`
+  - `src/features/settings/persistence-directory.ts`
+  - `src/storage/root-state/config.ts`
+  - `src/storage/file-system/directory-handle-store.ts`
+
 ## 1. MVP 权限
 
 ### `tabs`
@@ -23,7 +31,7 @@
 
 用途：
 
-- 保存会话组和设置
+- 保存会话组、设置和当前存储后端配置
 
 风险：
 
@@ -31,8 +39,28 @@
 
 控制：
 
-- 只保存在 `chrome.storage.local`
+- 默认保存在 `chrome.storage.local`
+- 若用户主动选择目录，`chrome.storage.local` 仅保留存储配置和同步信号
 - 不上传服务端
+
+### File System Access API
+
+用途：
+
+- 让用户在设置页选择持久化目录
+- 将 root state 写入用户指定目录下的 `tabvault-data.json`
+
+风险：
+
+- 用户选择的目录中会存在可读的本地 JSON 数据文件
+- 目录访问依赖用户授权，授权失效后功能会中断
+
+控制：
+
+- 仅在用户主动选择目录时启用
+- 不新增 Manifest 权限
+- 目录句柄只保存在扩展同源 IndexedDB 中
+- 设置页允许用户切回浏览器本地存储
 
 ### `contextMenus`
 
@@ -98,6 +126,7 @@ TabVault MVP 的隐私边界如下：
   - URL
   - favicon URL
   - 创建与恢复时间
+- 当启用目录持久化时，这些元数据会写入用户选定目录中的 JSON 文件
 - 不保存页面正文
 - 不分析页面内容
 - 不上传远程服务器
