@@ -29,9 +29,28 @@ export function NewTabApp() {
   }
 
   useEffect(() => {
-    void refreshState().catch((error) => {
-      setStatus(error instanceof Error ? error.message : "Failed to load saved sessions.");
-    });
+    let alive = true;
+
+    loadNewTabPageState()
+      .then((nextState) => {
+        if (!alive) {
+          return;
+        }
+
+        setPageState(nextState);
+        setStatus(nextState.hasSessions ? "Pick a session to restore or manage." : "No saved sessions yet.");
+      })
+      .catch((error) => {
+        if (!alive) {
+          return;
+        }
+
+        setStatus(error instanceof Error ? error.message : "Failed to load saved sessions.");
+      });
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   async function runNavigationAction(
