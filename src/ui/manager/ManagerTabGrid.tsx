@@ -128,6 +128,7 @@ export function ManagerTabGrid({
                   className="manager-tab-card__icon-button"
                   disabled={busyKey !== null}
                   onClick={() => void onOpenTab(sessionId, savedTab.id)}
+                  title="打开"
                   type="button"
                 >
                   ↗
@@ -137,6 +138,7 @@ export function ManagerTabGrid({
                   className="manager-tab-card__icon-button"
                   disabled={busyKey !== null}
                   onClick={() => void onRestoreTab(sessionId, savedTab.id)}
+                  title="还原并移除"
                   type="button"
                 >
                   ⤴
@@ -146,6 +148,7 @@ export function ManagerTabGrid({
                   className="manager-tab-card__icon-button"
                   disabled={busyKey !== null}
                   onClick={() => void onDeleteTab(sessionId, savedTab.id)}
+                  title="删除"
                   type="button"
                 >
                   ×

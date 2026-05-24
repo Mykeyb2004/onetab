@@ -1,0 +1,305 @@
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 22px;
+    margin-top: 20px;
+  }
+
+  .panel {
+    border-radius: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+  }
+
+  .panel__meta {
+    padding: 20px 22px 14px;
+  }
+
+  .panel__meta h3 {
+    margin: 8px 0 10px;
+    font-size: 24px;
+  }
+
+  .panel__meta p {
+    margin: 0;
+    color: #5f6f82;
+    line-height: 1.5;
+  }
+
+  .mock-stage {
+    padding: 18px;
+    background:
+      linear-gradient(180deg, rgba(249, 245, 238, 0.96), rgba(246, 240, 232, 0.96));
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .card {
+    min-height: 188px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06), 0 12px 24px rgba(15, 23, 42, 0.05);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  .card.is-focus {
+    box-shadow:
+      inset 0 0 0 2px rgba(201, 138, 36, 0.58),
+      0 16px 30px rgba(15, 23, 42, 0.08);
+  }
+
+  .card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .site {
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .site__icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    flex-shrink: 0;
+  }
+
+  .site__copy {
+    min-width: 0;
+  }
+
+  .site__copy strong,
+  .site__copy span {
+    display: block;
+  }
+
+  .site__copy strong {
+    font-size: 14px;
+    line-height: 1.35;
+    color: #18222f;
+  }
+
+  .site__copy span {
+    margin-top: 5px;
+    font-size: 11px;
+    color: #6b7b8f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .icons {
+    display: flex;
+    gap: 6px;
+    opacity: 0.16;
+    transition: opacity 140ms ease;
+  }
+
+  .card.is-focus .icons,
+  .card.is-hover .icons {
+    opacity: 1;
+  }
+
+  .icons span {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.06);
+    color: #405063;
+    font-size: 13px;
+  }
+
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .badges span {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f7ead0;
+    color: #946200;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .meta {
+    margin-top: 10px;
+    display: grid;
+    gap: 6px;
+    font-size: 11px;
+    color: #6b7a8d;
+  }
+
+  .hint {
+    margin-top: 12px;
+    font-size: 11px;
+    color: #7a8798;
+  }
+
+  .rules {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .rule {
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.04);
+    padding: 14px 16px;
+  }
+
+  .rule h4 {
+    margin: 0 0 8px;
+    font-size: 17px;
+  }
+
+  .rule p {
+    margin: 0;
+    color: #5e6e82;
+    line-height: 1.45;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .legend span {
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: white;
+    font-size: 11px;
+    color: #536377;
+  }
+
+  @media (max-width: 1200px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<h2>设计 2：卡片结构与悬浮小图标交互</h2>
+<p class="subtitle">这一节只定义宫格卡片本身怎么工作：默认看见什么、什么时候露出操作、鼠标和键盘怎么用。</p>
+
+<div class="layout">
+  <div class="panel">
+    <div class="panel__meta">
+      <div class="label">Interaction Mock</div>
+      <h3>同一套卡片，两档密度</h3>
+      <p>左边是 `简洁`，右边是 `增强`。两者都使用同一组悬浮小图标，不改变操作位置，只改变卡片正文的信息层级。</p>
+    </div>
+    <div class="mock-stage">
+      <div class="grid">
+        <div class="card is-hover">
+          <div>
+            <div class="card__top">
+              <div class="site">
+                <div class="site__icon">C</div>
+                <div class="site__copy">
+                  <strong>ChatGPT 车队</strong>
+                  <span>rawchat.cn</span>
+                </div>
+              </div>
+              <div class="icons">
+                <span title="打开">↗</span>
+                <span title="还原">⤴</span>
+                <span title="删除">×</span>
+              </div>
+            </div>
+            <div class="hint">简洁模式：只保留 favicon、标题、主域名</div>
+          </div>
+        </div>
+
+        <div class="card is-focus">
+          <div>
+            <div class="card__top">
+              <div class="site">
+                <div class="site__icon">V</div>
+                <div class="site__copy">
+                  <strong>Vibe Code 控制台</strong>
+                  <span>rawchat.cn</span>
+                </div>
+              </div>
+              <div class="icons">
+                <span title="打开">↗</span>
+                <span title="还原">⤴</span>
+                <span title="删除">×</span>
+              </div>
+            </div>
+            <div class="badges">
+              <span>控制台</span>
+              <span>已保存</span>
+            </div>
+            <div class="meta">
+              <div>创建于 2026/04/20</div>
+              <div>最近打开 2 天前</div>
+            </div>
+            <div class="hint">增强模式：在正文里增加一行轻量 meta</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel__meta">
+      <div class="label">Behavior Rules</div>
+      <h3>操作露出规则</h3>
+      <p>图标始终固定在卡片右上角，只在需要时变清晰，避免重按钮压住版面。</p>
+    </div>
+    <div class="rules">
+      <div class="rule">
+        <h4>鼠标</h4>
+        <p>鼠标悬停到卡片时，右上角 3 个小图标淡入。移出后淡出，但位置不跳动。</p>
+        <div class="legend">
+          <span>↗ 打开</span>
+          <span>⤴ 还原并移除</span>
+          <span>× 删除</span>
+        </div>
+      </div>
+      <div class="rule">
+        <h4>键盘</h4>
+        <p>Tab 聚焦到卡片时，卡片出现高亮边框，图标同时显示；继续 Tab 可进入三个图标按钮，Enter 或 Space 触发操作。</p>
+      </div>
+      <div class="rule">
+        <h4>触控/无 hover 场景</h4>
+        <p>首次点按卡片只进入选中态并显示图标；再次点图标才执行动作，避免误触直接打开或删除。</p>
+      </div>
+      <div class="rule">
+        <h4>拖拽兼容</h4>
+        <p>卡片正文区域仍然是拖拽手柄，右上角图标区域不参与拖拽，避免点击图标时误开始拖动。</p>
+      </div>
+    </div>
+  </div>
+</div>

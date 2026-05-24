@@ -1,0 +1,424 @@
+<style>
+  .hero {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 22px;
+    margin-top: 22px;
+  }
+
+  .panel {
+    border-radius: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+  }
+
+  .panel__meta {
+    padding: 20px 22px 14px;
+  }
+
+  .panel__meta h3 {
+    margin: 8px 0 10px;
+    font-size: 24px;
+  }
+
+  .panel__meta p {
+    margin: 0;
+    color: #5d6d80;
+    line-height: 1.5;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .chips span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+    color: #506073;
+    font-size: 12px;
+  }
+
+  .mock-stage {
+    padding: 18px;
+    background:
+      linear-gradient(180deg, rgba(249, 245, 238, 0.96), rgba(246, 240, 232, 0.96));
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .grid-shell {
+    border-radius: 22px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .card {
+    min-height: 176px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06), 0 12px 24px rgba(15, 23, 42, 0.05);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  .card.is-active {
+    box-shadow:
+      inset 0 0 0 2px rgba(201, 138, 36, 0.55),
+      0 14px 28px rgba(15, 23, 42, 0.08);
+  }
+
+  .card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .site {
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .site__icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    flex-shrink: 0;
+  }
+
+  .site__copy {
+    min-width: 0;
+  }
+
+  .site__copy strong,
+  .site__copy span {
+    display: block;
+  }
+
+  .site__copy strong {
+    font-size: 14px;
+    line-height: 1.35;
+    color: #18222f;
+  }
+
+  .site__copy span {
+    margin-top: 5px;
+    font-size: 11px;
+    color: #6b7b8f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hover-icons {
+    display: flex;
+    gap: 6px;
+    opacity: 0.38;
+  }
+
+  .hover-icons span {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.06);
+    color: #405063;
+    font-size: 13px;
+  }
+
+  .card.is-active .hover-icons {
+    opacity: 1;
+  }
+
+  .meta-stack {
+    display: grid;
+    gap: 8px;
+  }
+
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .badge-row span {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f7ead0;
+    color: #946200;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .soft-meta {
+    display: grid;
+    gap: 6px;
+    font-size: 11px;
+    color: #6c7b8e;
+  }
+
+  .soft-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.12), rgba(15, 23, 42, 0.05));
+  }
+
+  .decision {
+    display: grid;
+    gap: 14px;
+  }
+
+  .option {
+    border-radius: 18px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+    padding: 16px 18px;
+    cursor: pointer;
+  }
+
+  .option h4 {
+    margin: 6px 0 8px;
+    font-size: 18px;
+  }
+
+  .option p {
+    margin: 0;
+    color: #5d6d80;
+    line-height: 1.45;
+  }
+
+  .option .mini {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+    color: #57677a;
+    font-size: 11px;
+  }
+
+  @media (max-width: 1200px) {
+    .hero {
+      grid-template-columns: 1fr;
+    }
+
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>
+
+<h2>单一路线：自适应宫格 + 悬浮小图标操作</h2>
+<p class="subtitle">我已经按你的选择把方向收敛了：不再保留 A，也不走文字按钮型 B；现在只看一种更轻的宫格卡片，操作改成悬浮小图标。</p>
+
+<div class="hero">
+  <div class="panel">
+    <div class="panel__meta">
+      <div class="label">Confirmed Direction</div>
+      <h3>响应式宫格卡片</h3>
+      <p>卡片按宽度自动换列，默认强调内容识别；打开、还原、删除不再占据卡片主区域，而是在悬停或选中时以小图标浮现。</p>
+      <div class="chips">
+        <span>更轻</span>
+        <span>更像内容浏览器</span>
+        <span>保留高密度</span>
+        <span>操作不再压版面</span>
+      </div>
+    </div>
+    <div class="mock-stage">
+      <div class="grid-shell">
+        <div class="grid">
+          <div class="card is-active">
+            <div class="card__top">
+              <div class="site">
+                <div class="site__icon">C</div>
+                <div class="site__copy">
+                  <strong>ChatGPT Business Team 自助开通</strong>
+                  <span>codexcn.com</span>
+                </div>
+              </div>
+              <div class="hover-icons">
+                <span title="打开">↗</span>
+                <span title="还原">⤴</span>
+                <span title="删除">×</span>
+              </div>
+            </div>
+            <div class="meta-stack">
+              <div class="badge-row">
+                <span>AI 工具</span>
+                <span>已保存</span>
+              </div>
+              <div class="soft-meta">
+                <div>创建于 2026/04/20</div>
+                <div class="soft-bar"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__top">
+              <div class="site">
+                <div class="site__icon">V</div>
+                <div class="site__copy">
+                  <strong>Vibe Code 控制台</strong>
+                  <span>rawchat.cn</span>
+                </div>
+              </div>
+              <div class="hover-icons">
+                <span>↗</span>
+                <span>⤴</span>
+                <span>×</span>
+              </div>
+            </div>
+            <div class="meta-stack">
+              <div class="badge-row">
+                <span>控制台</span>
+              </div>
+              <div class="soft-meta">
+                <div>最近打开 2 天前</div>
+                <div class="soft-bar"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__top">
+              <div class="site">
+                <div class="site__icon">S</div>
+                <div class="site__copy">
+                  <strong>Codex 直连中转</strong>
+                  <span>api.vip1129.cc</span>
+                </div>
+              </div>
+              <div class="hover-icons">
+                <span>↗</span>
+                <span>⤴</span>
+                <span>×</span>
+              </div>
+            </div>
+            <div class="meta-stack">
+              <div class="badge-row">
+                <span>服务</span>
+              </div>
+              <div class="soft-meta">
+                <div>收藏 8 个标签中的 1 个</div>
+                <div class="soft-bar"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__top">
+              <div class="site">
+                <div class="site__icon">Z</div>
+                <div class="site__copy">
+                  <strong>ZenMux</strong>
+                  <span>zenmux.ai</span>
+                </div>
+              </div>
+              <div class="hover-icons">
+                <span>↗</span>
+                <span>⤴</span>
+                <span>×</span>
+              </div>
+            </div>
+            <div class="meta-stack">
+              <div class="badge-row">
+                <span>站点</span>
+              </div>
+              <div class="soft-meta">
+                <div>最近访问 5 天前</div>
+                <div class="soft-bar"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__top">
+              <div class="site">
+                <div class="site__icon">I</div>
+                <div class="site__copy">
+                  <strong>Itstudio</strong>
+                  <span>airouter.service.itstudio.club</span>
+                </div>
+              </div>
+              <div class="hover-icons">
+                <span>↗</span>
+                <span>⤴</span>
+                <span>×</span>
+              </div>
+            </div>
+            <div class="meta-stack">
+              <div class="badge-row">
+                <span>服务</span>
+              </div>
+              <div class="soft-meta">
+                <div>创建于 2026/05/01</div>
+                <div class="soft-bar"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__top">
+              <div class="site">
+                <div class="site__icon">L</div>
+                <div class="site__copy">
+                  <strong>链动小铺</strong>
+                  <span>pay.ldxp.cn</span>
+                </div>
+              </div>
+              <div class="hover-icons">
+                <span>↗</span>
+                <span>⤴</span>
+                <span>×</span>
+              </div>
+            </div>
+            <div class="meta-stack">
+              <div class="badge-row">
+                <span>商城</span>
+              </div>
+              <div class="soft-meta">
+                <div>最近打开 1 天前</div>
+                <div class="soft-bar"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="decision">
+    <div class="option" data-choice="a" onclick="toggleSelect(this)">
+      <div class="label">Next Decision</div>
+      <h4>A. 卡片默认只保留最少信息</h4>
+      <p>只显示 favicon、标题、主域名。要更高密度，扫读最快，其他信息都留到 hover 或二级详情。</p>
+      <span class="mini">最紧凑</span>
+    </div>
+    <div class="option" data-choice="b" onclick="toggleSelect(this)">
+      <div class="label">Next Decision</div>
+      <h4>B. 卡片默认保留一行辅助信息</h4>
+      <p>在标题和主域名之外，再加一行轻量 meta，比如标签、时间或来源，信息和密度更平衡。</p>
+      <span class="mini">平衡推荐</span>
+    </div>
+  </div>
+</div>

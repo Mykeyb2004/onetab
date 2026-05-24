@@ -1,0 +1,363 @@
+<style>
+  .view-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 24px;
+  }
+
+  .view-card {
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.92);
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    cursor: pointer;
+  }
+
+  .view-card.is-selected {
+    outline: 3px solid #c98a24;
+    outline-offset: -3px;
+  }
+
+  .view-card__meta {
+    padding: 18px 18px 8px;
+  }
+
+  .view-card__meta h3 {
+    margin: 0 0 8px;
+    font-size: 22px;
+  }
+
+  .view-card__meta p {
+    margin: 0;
+    color: #516074;
+    line-height: 1.45;
+  }
+
+  .mock-shell {
+    padding: 16px;
+    background:
+      linear-gradient(180deg, rgba(251, 248, 243, 0.95), rgba(248, 243, 236, 0.95));
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .mock-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .mock-row {
+    display: grid;
+    align-items: center;
+    gap: 12px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #16202b;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  }
+
+  .mock-row__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .mock-row__copy strong,
+  .mock-row__copy span {
+    display: block;
+  }
+
+  .mock-row__copy strong {
+    font-size: 15px;
+    line-height: 1.3;
+  }
+
+  .mock-row__copy span {
+    margin-top: 4px;
+    color: #66758a;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .mock-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .mock-pill {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #eef1f5;
+    color: #2f3c4b;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .mock-pill--primary {
+    background: #f2d7a6;
+    color: #3d2a0d;
+  }
+
+  .mock-row--comfortable {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    padding: 16px;
+  }
+
+  .mock-row--compact {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    padding: 12px 14px;
+  }
+
+  .mock-row--compact .mock-row__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .mock-row--compact .mock-row__copy strong {
+    font-size: 14px;
+  }
+
+  .mock-row--compact .mock-row__copy span {
+    font-size: 11px;
+  }
+
+  .mock-actions--icons {
+    gap: 6px;
+  }
+
+  .mock-dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    background: #eef1f5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #415063;
+  }
+
+  .mock-domain {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #6d7b8e;
+    margin-top: 6px;
+  }
+
+  .mock-badge {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #f7ead0;
+    color: #946200;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .mock-row--recognition {
+    grid-template-columns: 44px minmax(0, 1fr) 74px;
+    padding: 14px;
+  }
+
+  .mock-row--recognition .mock-row__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+  }
+
+  .mock-stack {
+    display: grid;
+    gap: 8px;
+  }
+
+  .mock-ghost {
+    padding: 8px 10px;
+    border-radius: 14px;
+    background: #eef1f5;
+    color: #415063;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .scoreline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .scoreline span {
+    font-size: 12px;
+    color: #5c6b7f;
+    background: rgba(15, 23, 42, 0.05);
+    border-radius: 999px;
+    padding: 6px 10px;
+  }
+
+  @media (max-width: 1100px) {
+    .view-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<h2>右侧标签区视图切换方向</h2>
+<p class="subtitle">你刚才给出的优先级是：一屏更多、识别更快、管理更顺手。先不要纠结细节实现，只选最接近你心里默认体验的方向。</p>
+
+<div class="view-grid">
+  <div class="view-card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="view-card__meta">
+      <div class="label">A · 平衡型</div>
+      <h3>舒展列表</h3>
+      <p>保留当前操作按钮全部可见，主要通过收紧留白和排版优化来提升密度，学习成本最低。</p>
+      <div class="scoreline">
+        <span>密度: 中</span>
+        <span>识别: 高</span>
+        <span>操作直达: 很高</span>
+      </div>
+    </div>
+    <div class="mock-shell">
+      <div class="mock-list">
+        <div class="mock-row mock-row--comfortable">
+          <div class="mock-row__icon">C</div>
+          <div class="mock-row__copy">
+            <strong>ChatGPT 车队</strong>
+            <span>rawchat.cn/pastel#/carlist</span>
+          </div>
+          <div class="mock-actions">
+            <span class="mock-pill mock-pill--primary">打开</span>
+            <span class="mock-pill">还原</span>
+            <span class="mock-pill">删除</span>
+          </div>
+        </div>
+        <div class="mock-row mock-row--comfortable">
+          <div class="mock-row__icon">V</div>
+          <div class="mock-row__copy">
+            <strong>Vibe Code 控制台</strong>
+            <span>rawchat.cn/pastel#/vibe-code/dashboard</span>
+          </div>
+          <div class="mock-actions">
+            <span class="mock-pill mock-pill--primary">打开</span>
+            <span class="mock-pill">还原</span>
+            <span class="mock-pill">删除</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view-card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="view-card__meta">
+      <div class="label">B · 密度优先</div>
+      <h3>紧凑列表</h3>
+      <p>尽量把一屏行数拉高，动作从文字按钮收敛成小图标或次级操作，更适合大量标签快速扫和拖拽。</p>
+      <div class="scoreline">
+        <span>密度: 很高</span>
+        <span>识别: 中高</span>
+        <span>操作直达: 中</span>
+      </div>
+    </div>
+    <div class="mock-shell">
+      <div class="mock-list">
+        <div class="mock-row mock-row--compact">
+          <div class="mock-row__icon">C</div>
+          <div class="mock-row__copy">
+            <strong>ChatGPT 车队</strong>
+            <span>rawchat.cn/pastel#/carlist</span>
+          </div>
+          <div class="mock-actions mock-actions--icons">
+            <span class="mock-dot">↗</span>
+            <span class="mock-dot">⤴</span>
+            <span class="mock-dot">×</span>
+          </div>
+        </div>
+        <div class="mock-row mock-row--compact">
+          <div class="mock-row__icon">V</div>
+          <div class="mock-row__copy">
+            <strong>Vibe Code 控制台</strong>
+            <span>rawchat.cn/pastel#/dashboard</span>
+          </div>
+          <div class="mock-actions mock-actions--icons">
+            <span class="mock-dot">↗</span>
+            <span class="mock-dot">⤴</span>
+            <span class="mock-dot">×</span>
+          </div>
+        </div>
+        <div class="mock-row mock-row--compact">
+          <div class="mock-row__icon">Z</div>
+          <div class="mock-row__copy">
+            <strong>ZenMux</strong>
+            <span>zenmux.ai</span>
+          </div>
+          <div class="mock-actions mock-actions--icons">
+            <span class="mock-dot">↗</span>
+            <span class="mock-dot">⤴</span>
+            <span class="mock-dot">×</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view-card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="view-card__meta">
+      <div class="label">C · 识别优先</div>
+      <h3>识别增强列表</h3>
+      <p>把 favicon、主域名和站点类型做得更突出，动作区缩成一列，优先帮助你更快判断“这条到底是什么”。</p>
+      <div class="scoreline">
+        <span>密度: 中高</span>
+        <span>识别: 很高</span>
+        <span>操作直达: 高</span>
+      </div>
+    </div>
+    <div class="mock-shell">
+      <div class="mock-list">
+        <div class="mock-row mock-row--recognition">
+          <div class="mock-row__icon">C</div>
+          <div class="mock-row__copy">
+            <strong>ChatGPT Business Team 自助开通</strong>
+            <div class="mock-domain">
+              <span class="mock-badge">AI 工具</span>
+              <span>codexcn.com</span>
+            </div>
+          </div>
+          <div class="mock-stack">
+            <div class="mock-ghost">打开</div>
+            <div class="mock-ghost">更多</div>
+          </div>
+        </div>
+        <div class="mock-row mock-row--recognition">
+          <div class="mock-row__icon">S</div>
+          <div class="mock-row__copy">
+            <strong>仪表盘 - Codex 直连中转</strong>
+            <div class="mock-domain">
+              <span class="mock-badge">控制台</span>
+              <span>api.vip1129.cc</span>
+            </div>
+          </div>
+          <div class="mock-stack">
+            <div class="mock-ghost">打开</div>
+            <div class="mock-ghost">更多</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 22px;">
+  <p class="subtitle">回答方式很简单：回终端告诉我你更偏向 <strong>A / B / C</strong>，或者说“以 A 为主，但吸收 B 的密度”。浏览器里点一下也可以。</p>
+</div>

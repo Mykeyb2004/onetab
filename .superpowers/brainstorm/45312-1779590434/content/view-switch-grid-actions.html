@@ -1,0 +1,379 @@
+<style>
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .summary-card {
+    border-radius: 20px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+    padding: 18px;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
+  }
+
+  .summary-card h3 {
+    margin: 8px 0 10px;
+    font-size: 22px;
+  }
+
+  .summary-card p {
+    margin: 0;
+    color: #5f6f82;
+    line-height: 1.45;
+  }
+
+  .mini-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .mini-pills span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+    font-size: 12px;
+    color: #556477;
+  }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 24px;
+  }
+
+  .option-card {
+    border-radius: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .option-meta {
+    padding: 18px 18px 10px;
+  }
+
+  .option-meta h3 {
+    margin: 6px 0 10px;
+    font-size: 22px;
+  }
+
+  .option-meta p {
+    margin: 0;
+    color: #5f6f82;
+    line-height: 1.45;
+  }
+
+  .mock-stage {
+    padding: 16px;
+    background:
+      linear-gradient(180deg, rgba(249, 245, 238, 0.96), rgba(246, 240, 232, 0.96));
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .mock-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .mock-tile {
+    border-radius: 18px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+    min-height: 166px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .tile-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tile-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    color: #fff;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .tile-copy strong,
+  .tile-copy span {
+    display: block;
+  }
+
+  .tile-copy strong {
+    font-size: 14px;
+    line-height: 1.3;
+    color: #16202b;
+  }
+
+  .tile-copy span {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #6b7a8d;
+  }
+
+  .tile-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .tile-tags span {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f7ead0;
+    color: #946200;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .tile-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  .tile-actions--stack {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 1fr;
+    margin-top: 14px;
+  }
+
+  .tile-action {
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: #edf0f4;
+    color: #334255;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .tile-action--primary {
+    background: #f2d7a6;
+    color: #3d2a0d;
+  }
+
+  .tile-overlay {
+    margin-top: 14px;
+    border-radius: 16px;
+    background: rgba(19, 30, 43, 0.92);
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .tile-overlay span {
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 11px;
+    padding: 8px 0;
+    text-align: center;
+  }
+
+  .note {
+    margin-top: 20px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.05);
+    color: #49586b;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 1200px) {
+    .options-grid,
+    .summary {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<h2>保留两种视图：宫格 B + 识别增强 C</h2>
+<p class="subtitle">你的方向我先收敛成两条：`B` 改成自适应宫格视图，重点提升一屏容量；`C` 保留为识别增强列表，重点提升辨识速度。现在只决定一个关键问题：宫格卡片上的操作怎么露出。</p>
+
+<div class="summary">
+  <div class="summary-card">
+    <div class="label">B · 新版</div>
+    <h3>响应式宫格视图</h3>
+    <p>卡片按容器宽度自适应换列，适合大量标签快速扫读、拖拽和跨组整理。</p>
+    <div class="mini-pills">
+      <span>一屏更多</span>
+      <span>布局弹性更强</span>
+      <span>需要重新设计操作区</span>
+    </div>
+  </div>
+  <div class="summary-card">
+    <div class="label">C · 保留</div>
+    <h3>识别增强列表</h3>
+    <p>继续作为第二种视图，保留主域名、站点类型和更强的内容识别层次。</p>
+    <div class="mini-pills">
+      <span>识别更快</span>
+      <span>信息层次更稳定</span>
+      <span>列表操作更直达</span>
+    </div>
+  </div>
+</div>
+
+<div class="options-grid">
+  <div class="option-card" data-choice="1" onclick="toggleSelect(this)">
+    <div class="option-meta">
+      <div class="label">1 · 全部常驻</div>
+      <h3>三个动作一直可见</h3>
+      <p>打开、还原、删除都直接摆在卡片里，管理成本最低，但会明显吃掉宫格密度。</p>
+    </div>
+    <div class="mock-stage">
+      <div class="mock-grid">
+        <div class="mock-tile">
+          <div>
+            <div class="tile-top">
+              <div class="tile-icon">C</div>
+              <div class="tile-copy">
+                <strong>ChatGPT 车队</strong>
+                <span>rawchat.cn</span>
+              </div>
+            </div>
+            <div class="tile-tags"><span>AI 工具</span></div>
+          </div>
+          <div class="tile-actions--stack">
+            <div class="tile-action tile-action--primary">打开</div>
+            <div class="tile-action">还原</div>
+            <div class="tile-action">删除</div>
+          </div>
+        </div>
+        <div class="mock-tile">
+          <div>
+            <div class="tile-top">
+              <div class="tile-icon">V</div>
+              <div class="tile-copy">
+                <strong>Vibe Code</strong>
+                <span>rawchat.cn</span>
+              </div>
+            </div>
+            <div class="tile-tags"><span>控制台</span></div>
+          </div>
+          <div class="tile-actions--stack">
+            <div class="tile-action tile-action--primary">打开</div>
+            <div class="tile-action">还原</div>
+            <div class="tile-action">删除</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option-card" data-choice="2" onclick="toggleSelect(this)">
+    <div class="option-meta">
+      <div class="label">2 · 主动作优先</div>
+      <h3>默认只露出“打开”</h3>
+      <p>卡片平时只显示主动作，其余动作放进“更多”，密度和管理性比较平衡。</p>
+    </div>
+    <div class="mock-stage">
+      <div class="mock-grid">
+        <div class="mock-tile">
+          <div>
+            <div class="tile-top">
+              <div class="tile-icon">C</div>
+              <div class="tile-copy">
+                <strong>ChatGPT 车队</strong>
+                <span>rawchat.cn</span>
+              </div>
+            </div>
+            <div class="tile-tags"><span>AI 工具</span></div>
+          </div>
+          <div class="tile-actions">
+            <div class="tile-action tile-action--primary" style="flex:1;">打开</div>
+            <div class="tile-action">更多</div>
+          </div>
+        </div>
+        <div class="mock-tile">
+          <div>
+            <div class="tile-top">
+              <div class="tile-icon">Z</div>
+              <div class="tile-copy">
+                <strong>ZenMux</strong>
+                <span>zenmux.ai</span>
+              </div>
+            </div>
+            <div class="tile-tags"><span>服务</span></div>
+          </div>
+          <div class="tile-actions">
+            <div class="tile-action tile-action--primary" style="flex:1;">打开</div>
+            <div class="tile-action">更多</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option-card" data-choice="3" onclick="toggleSelect(this)">
+    <div class="option-meta">
+      <div class="label">3 · 交互后再露出</div>
+      <h3>选中或悬停时出现操作层</h3>
+      <p>平时最干净，宫格密度最高，但发现性和可访问性会更依赖额外交互提示。</p>
+    </div>
+    <div class="mock-stage">
+      <div class="mock-grid">
+        <div class="mock-tile">
+          <div>
+            <div class="tile-top">
+              <div class="tile-icon">S</div>
+              <div class="tile-copy">
+                <strong>Codex 直连中转</strong>
+                <span>api.vip1129.cc</span>
+              </div>
+            </div>
+            <div class="tile-tags"><span>控制台</span></div>
+          </div>
+          <div class="tile-overlay">
+            <span>打开</span>
+            <span>还原</span>
+            <span>删除</span>
+          </div>
+        </div>
+        <div class="mock-tile">
+          <div>
+            <div class="tile-top">
+              <div class="tile-icon">I</div>
+              <div class="tile-copy">
+                <strong>Itstudio</strong>
+                <span>airouter.service.itstudio.club</span>
+              </div>
+            </div>
+            <div class="tile-tags"><span>站点</span></div>
+          </div>
+          <div class="tile-overlay">
+            <span>打开</span>
+            <span>还原</span>
+            <span>删除</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  回终端告诉我你更偏向 <strong>1 / 2 / 3</strong>。如果是组合答案也可以，比如“以 2 为主，但选中后补充 3 的交互”。
+</div>
