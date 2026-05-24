@@ -61,6 +61,7 @@
 - 核心业务逻辑优先写成纯函数。
 - 所有持久化结构必须有明确的 schema version。
 - 数据迁移必须可重复执行，并有测试覆盖。
+- 持久化数据结构演进默认采用升级式迁移，优先兼容历史数据，禁止无迁移地整体重置已有记录。
 - 对 Chrome API 的调用必须经过一层可替换的 adapter，方便测试。
 - 对特殊页面的过滤逻辑必须集中管理，不能散落在多个组件中。
 
@@ -69,6 +70,7 @@
 - 时间统一使用 ISO 8601 字符串存储。
 - ID 使用稳定、可序列化的字符串 ID。
 - 存储层写入前做 schema 校验，读取后做容错和迁移。
+- `settings` 结构变更必须基于已有配置做合并升级：新增字段补默认值，保留可兼容旧字段，废弃字段通过迁移逐步收敛，不得因版本升级整份覆盖用户已有配置。
 - UI 状态与持久化状态分离，临时筛选/展开状态不得污染存储模型。
 
 ## 4. 代码规范
@@ -233,6 +235,7 @@
 - 默认本地优先，不依赖远程服务才能工作。
 - 导入导出数据格式必须带版本字段。
 - 导出文件应足够简单，允许用户进行人工检查和迁移。
+- 修改持久化 schema、历史记录或用户 `settings` 时，必须尽量保留原有数据；若存在不可兼容变更，必须提供显式迁移逻辑、迁移说明，并优先给出备份或导出方案。
 
 ## 9. 开发流程规范
 
@@ -274,6 +277,7 @@
 - 导入导出格式变化
 - 本地数据结构变化
 - 恢复行为变化
+- `settings` 字段、默认值或行为语义变化
 
 ## 11. AI Agent 额外约束
 
@@ -294,3 +298,47 @@
 - 更本地优先的方案
 
 如果必须偏离这些默认规则，先记录原因，再实施变更。
+
+<!-- gitnexus:start -->
+# GitNexus — Code Intelligence
+
+This project is indexed by GitNexus as **onetab** (1576 symbols, 3111 relationships, 132 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+
+> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+
+## Always Do
+
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
+- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
+- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+
+## Never Do
+
+- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
+- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
+- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
+- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
+
+## Resources
+
+| Resource | Use for |
+|----------|---------|
+| `gitnexus://repo/onetab/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/onetab/clusters` | All functional areas |
+| `gitnexus://repo/onetab/processes` | All execution flows |
+| `gitnexus://repo/onetab/process/{name}` | Step-by-step execution trace |
+
+## CLI
+
+| Task | Read this skill file |
+|------|---------------------|
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+
+<!-- gitnexus:end -->

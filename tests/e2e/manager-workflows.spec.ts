@@ -7,53 +7,88 @@ test.skip(
 
 const ROOT_STORAGE_KEY = "tabvault:root";
 
-async function seedManagerState(extensionId: string, managerPage: import("@playwright/test").Page) {
-  await managerPage.goto(`chrome-extension://${extensionId}/manager.html`);
-  await managerPage.evaluate(async ([storageKey]) => {
-    await chrome.storage.local.set({
-      [storageKey]: {
-        schemaVersion: 1,
-        settings: {
-          restoreBehavior: "remove-group",
-          defaultClickAction: "capture-current-window",
-          showCaptureFeedback: true,
-          enableContextMenu: true
+function createSeededSession(sessionId: string, title: string, tabCount: number) {
+  return {
+    id: sessionId,
+    title,
+    createdAt: "2026-04-19T10:00:00.000Z",
+    updatedAt: "2026-04-19T10:00:00.000Z",
+    trashedAt: null,
+    tabCount,
+    pinned: false,
+    sourceWindowId: 1,
+    tabs: Array.from({ length: tabCount }, (_, index) => ({
+      id: `${sessionId}-tab-${index + 1}`,
+      title: `${title} Tab ${index + 1}`,
+      url: `https://example.com/${sessionId}/tab-${index + 1}`,
+      favIconUrl: null,
+      createdAt: "2026-04-19T10:00:00.000Z",
+      lastOpenedAt: null,
+      originalIndex: index
+    }))
+  };
+}
+
+async function seedManagerState(
+  extensionId: string,
+  managerPage: import("@playwright/test").Page,
+  sessions = [
+    {
+      id: "session-1",
+      title: "Research Bundle",
+      createdAt: "2026-04-19T10:00:00.000Z",
+      updatedAt: "2026-04-19T10:00:00.000Z",
+      trashedAt: null,
+      tabCount: 2,
+      pinned: false,
+      sourceWindowId: 1,
+      tabs: [
+        {
+          id: "tab-1",
+          title: "React Compiler",
+          url: "https://example.com/react-compiler",
+          favIconUrl: null,
+          createdAt: "2026-04-19T10:00:00.000Z",
+          lastOpenedAt: null,
+          originalIndex: 0
         },
-        sessions: [
-          {
-            id: "session-1",
-            title: "Research Bundle",
-            createdAt: "2026-04-19T10:00:00.000Z",
-            updatedAt: "2026-04-19T10:00:00.000Z",
-            trashedAt: null,
-            tabCount: 2,
-            pinned: false,
-            sourceWindowId: 1,
-            tabs: [
-              {
-                id: "tab-1",
-                title: "React Compiler",
-                url: "https://example.com/react-compiler",
-                favIconUrl: null,
-                createdAt: "2026-04-19T10:00:00.000Z",
-                lastOpenedAt: null,
-                originalIndex: 0
-              },
-              {
-                id: "tab-2",
-                title: "Testing Docs",
-                url: "https://docs.example.com/testing",
-                favIconUrl: null,
-                createdAt: "2026-04-19T10:00:00.000Z",
-                lastOpenedAt: null,
-                originalIndex: 1
-              }
-            ]
-          }
-        ]
-      }
-    });
-  }, [ROOT_STORAGE_KEY]);
+        {
+          id: "tab-2",
+          title: "Testing Docs",
+          url: "https://docs.example.com/testing",
+          favIconUrl: null,
+          createdAt: "2026-04-19T10:00:00.000Z",
+          lastOpenedAt: null,
+          originalIndex: 1
+        }
+      ]
+    }
+  ]
+) {
+  await managerPage.goto(`chrome-extension://${extensionId}/manager.html`);
+  await managerPage.evaluate(
+    async ({
+      storageKey,
+      nextSessions
+    }: {
+      storageKey: string;
+      nextSessions: typeof sessions;
+    }) => {
+      await chrome.storage.local.set({
+        [storageKey]: {
+          schemaVersion: 1,
+          settings: {
+            restoreBehavior: "remove-group",
+            defaultClickAction: "capture-current-window",
+            showCaptureFeedback: true,
+            enableContextMenu: true
+          },
+          sessions: nextSessions
+        }
+      });
+    },
+    { storageKey: ROOT_STORAGE_KEY, nextSessions: sessions }
+  );
 
   await managerPage.reload();
 }
@@ -94,4 +129,42 @@ test("manager can restore a tab from seeded session state", async ({
   await managerPage.getByRole("button", { name: "Restore Tab" }).first().click();
   await expect(managerPage.getByText(/Restored 1 tab/)).toBeVisible();
   await expect(managerPage.getByText("Testing Docs")).toBeVisible();
+});
+
+test("manager keeps the sidebar visible while the tab list scrolls", async ({
+  context,
+  extensionId
+}) => {
+  const managerPage = await context.newPage();
+  await seedManagerState(extensionId, managerPage, [
+    createSeededSession("session-1", "Long Session", 40),
+    createSeededSession("session-2", "Drop Target", 3)
+  ]);
+
+  const sidebar = managerPage.locator(".manager-sidebar");
+  const main = managerPage.locator(".manager-main");
+  const targetSession = managerPage.locator("#session-node-session-2");
+
+  const beforeSidebarBox = await sidebar.boundingBox();
+  expect(beforeSidebarBox).not.toBeNull();
+  await expect(targetSession).toBeVisible();
+
+  await main.evaluate((node) => {
+    const element = node as HTMLElement;
+    element.scrollTop = element.scrollHeight;
+  });
+
+  await expect
+    .poll(() =>
+      main.evaluate((node) => {
+        const element = node as HTMLElement;
+        return element.scrollTop;
+      })
+    )
+    .toBeGreaterThan(0);
+
+  const afterSidebarBox = await sidebar.boundingBox();
+  expect(afterSidebarBox).not.toBeNull();
+  expect(Math.abs((afterSidebarBox?.y ?? 0) - (beforeSidebarBox?.y ?? 0))).toBeLessThan(4);
+  await expect(targetSession).toBeVisible();
 });

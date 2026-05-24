@@ -6,6 +6,7 @@ import {
   updateSettings,
   type ExtensionStorageArea
 } from "../../../src/storage/local/repository";
+import { ROOT_STORAGE_KEY } from "../../../src/storage/local/schema";
 
 function createMemoryStorage(): ExtensionStorageArea {
   const data = new Map<string, unknown>();
@@ -56,5 +57,51 @@ describe("local repository", () => {
     expect(state.sessions[0].title).toBe("保存于 2026-04-19");
     expect(state.settings.defaultClickAction).toBe("open-manager");
     expect(state.settings.enableContextMenu).toBe(false);
+  });
+
+  it("should migrate legacy saved sessions without clearing user data", async () => {
+    const storage = createMemoryStorage();
+
+    await storage.set({
+      [ROOT_STORAGE_KEY]: {
+        schemaVersion: 1,
+        settings: {
+          restoreBehavior: "keep-group"
+        },
+        sessions: [
+          {
+            id: "legacy-session",
+            title: "Legacy Session",
+            createdAt: "2026-04-19T10:00:00.000Z",
+            updatedAt: "2026-04-19T11:00:00.000Z",
+            tabs: [
+              {
+                id: "legacy-tab",
+                title: "Legacy Tab",
+                url: "https://example.com/legacy"
+              }
+            ]
+          }
+        ]
+      }
+    });
+
+    const state = await readRootState(storage);
+
+    expect(state.sessions).toHaveLength(1);
+    expect(state.sessions[0]).toMatchObject({
+      id: "legacy-session",
+      title: "Legacy Session",
+      pinned: false,
+      trashedAt: null,
+      tabCount: 1
+    });
+    expect(state.sessions[0].tabs[0]).toMatchObject({
+      id: "legacy-tab",
+      title: "Legacy Tab",
+      url: "https://example.com/legacy"
+    });
+    expect(state.settings.restoreBehavior).toBe("keep-group");
+    expect(state.settings.enableContextMenu).toBe(true);
   });
 });

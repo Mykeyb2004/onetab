@@ -186,35 +186,39 @@ export function OptionsApp() {
           </div>
 
           <div className="field">
-            <label htmlFor="show-capture-feedback">Show capture feedback</label>
-            <input
-              id="show-capture-feedback"
-              disabled={!canEditSettings}
-              checked={settings.showCaptureFeedback}
-              onChange={(event) =>
-                persistSettings({
-                  ...settings,
-                  showCaptureFeedback: event.target.checked
-                })
-              }
-              type="checkbox"
-            />
+            <label className="field__toggle-control" htmlFor="show-capture-feedback">
+              <input
+                id="show-capture-feedback"
+                disabled={!canEditSettings}
+                checked={settings.showCaptureFeedback}
+                onChange={(event) =>
+                  persistSettings({
+                    ...settings,
+                    showCaptureFeedback: event.target.checked
+                  })
+                }
+                type="checkbox"
+              />
+              <span>Show capture feedback</span>
+            </label>
           </div>
 
           <div className="field">
-            <label htmlFor="enable-context-menu">Enable action context menu</label>
-            <input
-              id="enable-context-menu"
-              disabled={!canEditSettings}
-              checked={settings.enableContextMenu}
-              onChange={(event) =>
-                persistSettings({
-                  ...settings,
-                  enableContextMenu: event.target.checked
-                })
-              }
-              type="checkbox"
-            />
+            <label className="field__toggle-control" htmlFor="enable-context-menu">
+              <input
+                id="enable-context-menu"
+                disabled={!canEditSettings}
+                checked={settings.enableContextMenu}
+                onChange={(event) =>
+                  persistSettings({
+                    ...settings,
+                    enableContextMenu: event.target.checked
+                  })
+                }
+                type="checkbox"
+              />
+              <span>Enable action context menu</span>
+            </label>
           </div>
         </div>
       ) : (

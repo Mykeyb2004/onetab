@@ -23,7 +23,7 @@ input {
   font: inherit;
 }
 
-input,
+input:not([type="checkbox"]):not([type="radio"]),
 select {
   width: 100%;
   border: 1px solid rgba(24, 33, 38, 0.14);
@@ -33,12 +33,23 @@ select {
   padding: 10px 12px;
 }
 
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
 .app-shell {
   display: flex;
   flex-direction: column;
   gap: 24px;
   min-height: 100vh;
   padding: 24px;
+}
+
+.app-shell:has(.manager-workbench) {
+  height: 100vh;
 }
 
 .app-shell__header {
@@ -96,8 +107,10 @@ select {
 
 .app-shell__body {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
 }
 
 .card {
@@ -294,20 +307,32 @@ select {
   display: grid;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .manager-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  min-height: 720px;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.manager-sidebar.card {
+  padding: 14px 12px;
 }
 
 .manager-sidebar__section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .manager-tree__section,
@@ -343,6 +368,8 @@ select {
 
 .manager-tree__toggle {
   color: #5f6a72;
+  font-size: 12px;
+  padding: 0 8px;
   text-align: left;
 }
 
@@ -365,20 +392,35 @@ select {
 .manager-tree__children {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
   list-style: none;
   margin: 0;
-  padding: 0 0 0 14px;
+  padding: 2px 0 0 10px;
 }
 
 .manager-tree__node {
-  background: rgba(24, 33, 38, 0.03);
+  min-height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  padding: 5px 8px;
+}
+
+.manager-tree__node:hover {
+  background: rgba(24, 33, 38, 0.04);
+}
+
+.manager-tree__item {
+  position: relative;
+}
+
+.manager-tree__item--menu-open {
+  z-index: 1;
 }
 
 .manager-tree__node-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: 2px;
   align-items: center;
 }
 
@@ -398,17 +440,18 @@ select {
 .manager-tree__menu-trigger {
   appearance: none;
   border: 0;
-  border-radius: 12px;
-  background: rgba(24, 33, 38, 0.05);
+  border-radius: 8px;
+  background: transparent;
   color: #5f6a72;
   cursor: pointer;
-  min-width: 40px;
-  min-height: 40px;
+  min-width: 32px;
+  min-height: 32px;
 }
 
-.manager-tree__menu-trigger:hover {
-  color: #182126;
+.manager-tree__menu-trigger:hover,
+.manager-tree__menu-trigger[aria-expanded="true"] {
   background: rgba(138, 91, 36, 0.12);
+  color: #182126;
 }
 
 .manager-tree__menu {
@@ -422,6 +465,16 @@ select {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 10px 20px rgba(24, 33, 38, 0.06);
+}
+
+.manager-tree__menu--popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 168px;
+  margin-top: 0;
+  margin-left: 0;
+  z-index: 2;
 }
 
 .manager-tree__menu-item {
@@ -443,6 +496,10 @@ select {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
 }
 
 .manager-detail {
@@ -472,7 +529,7 @@ select {
 
 .manager-detail__title {
   margin: 0;
-  font-size: 44px;
+  font-size: 16px;
   line-height: 1.08;
   letter-spacing: -0.04em;
 }
@@ -566,7 +623,7 @@ select {
   background: transparent;
   color: #1f4db8;
   cursor: pointer;
-  font-size: 17px;
+  font-size: 16px;
   overflow: hidden;
   padding: 0;
   text-align: left;
@@ -609,6 +666,14 @@ select {
 .field label {
   font-size: 14px;
   font-weight: 600;
+}
+
+.field__toggle-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  cursor: pointer;
 }
 
 .field__value {
@@ -667,6 +732,10 @@ select {
     padding: 18px;
   }
 
+  .app-shell:has(.manager-workbench) {
+    height: auto;
+  }
+
   .app-shell__title-row,
   .manager-header-actions {
     flex-direction: column;
@@ -681,6 +750,25 @@ select {
 
   .manager-links {
     justify-content: flex-start;
+  }
+
+  .app-shell__body,
+  .manager-workbench,
+  .manager-sidebar,
+  .manager-main {
+    min-height: initial;
+  }
+
+  .manager-sidebar {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .manager-main {
+    overflow: visible;
+    padding-right: 0;
   }
 
   .session-card__header,

@@ -154,7 +154,10 @@ export function ManagerApp() {
   const [showMoreActions, setShowMoreActions] = useState(false);
   const [isActiveExpanded, setIsActiveExpanded] = useState(true);
   const [isTrashExpanded, setIsTrashExpanded] = useState(true);
-  const [openSessionMenuId, setOpenSessionMenuId] = useState<string | null>(null);
+  const [hoveredActiveSessionMenuId, setHoveredActiveSessionMenuId] = useState<string | null>(
+    null
+  );
+  const [hoveredTrashSessionMenuId, setHoveredTrashSessionMenuId] = useState<string | null>(null);
   const [dragOverSessionId, setDragOverSessionId] = useState<string | null>(null);
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
   const [draggedSessionId, setDraggedSessionId] = useState<string | null>(null);
@@ -270,17 +273,66 @@ export function ManagerApp() {
     };
   }, [loadSessionCollections, selectedBucket, selectedSessionId]);
 
+  function closeSessionMenus() {
+    setHoveredActiveSessionMenuId(null);
+    setHoveredTrashSessionMenuId(null);
+  }
+
+  function toggleActiveSessionMenu(sessionId: string) {
+    setHoveredActiveSessionMenuId((current) => {
+      setHoveredTrashSessionMenuId(null);
+      return current === sessionId ? null : sessionId;
+    });
+  }
+
+  function closeActiveSessionMenu(sessionId: string) {
+    setHoveredActiveSessionMenuId((current) => (current === sessionId ? null : current));
+  }
+
+  function handleActiveSessionItemBlur(
+    event: React.FocusEvent<HTMLLIElement>,
+    sessionId: string
+  ) {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
+    }
+
+    closeActiveSessionMenu(sessionId);
+  }
+
+  function toggleTrashSessionMenu(sessionId: string) {
+    setHoveredTrashSessionMenuId((current) => {
+      setHoveredActiveSessionMenuId(null);
+      return current === sessionId ? null : sessionId;
+    });
+  }
+
+  function closeTrashSessionMenu(sessionId: string) {
+    setHoveredTrashSessionMenuId((current) => (current === sessionId ? null : current));
+  }
+
+  function handleTrashSessionItemBlur(
+    event: React.FocusEvent<HTMLLIElement>,
+    sessionId: string
+  ) {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
+    }
+
+    closeTrashSessionMenu(sessionId);
+  }
+
   function selectBucket(bucket: SessionBucket) {
     const sessions = bucket === "trash" ? sessionCollections.trashedSessions : sessionCollections.activeSessions;
     setShowMoreActions(false);
-    setOpenSessionMenuId(null);
+    closeSessionMenus();
     setSelectedBucket(bucket);
     setSelectedSessionId(sessions[0]?.id ?? null);
   }
 
   function selectSession(bucket: SessionBucket, sessionId: string) {
     setShowMoreActions(false);
-    setOpenSessionMenuId(null);
+    closeSessionMenus();
     setSelectedBucket(bucket);
     setSelectedSessionId(sessionId);
   }
@@ -294,7 +346,7 @@ export function ManagerApp() {
 
     const bucket: SessionBucket = isSessionGroupTrashed(matchedSession) ? "trash" : "active";
     setShowMoreActions(false);
-    setOpenSessionMenuId(null);
+    closeSessionMenus();
     setSelectedBucket(bucket);
     setSelectedSessionId(matchedSession.id);
     document.getElementById(`session-node-${matchedSession.id}`)?.scrollIntoView({
@@ -353,7 +405,7 @@ export function ManagerApp() {
     }
 
     setBusyKey(`rename:${sessionId}`);
-    setOpenSessionMenuId(null);
+    closeSessionMenus();
 
     try {
       await renameSessionGroup(sessionId, nextTitle);
@@ -388,7 +440,7 @@ export function ManagerApp() {
 
   async function handleTogglePin(sessionId: string) {
     setBusyKey(`pin:${sessionId}`);
-    setOpenSessionMenuId(null);
+    closeSessionMenus();
 
     try {
       const updatedSession = await togglePinSessionGroup(sessionId);
@@ -409,7 +461,7 @@ export function ManagerApp() {
     }
 
     setBusyKey(`trash:${sessionId}`);
-    setOpenSessionMenuId(null);
+    closeSessionMenus();
 
     try {
       await deleteSessionGroup(sessionId);
@@ -424,7 +476,7 @@ export function ManagerApp() {
 
   async function handleRestoreGroupFromTrash(sessionId: string) {
     setBusyKey(`restore-trash:${sessionId}`);
-    setOpenSessionMenuId(null);
+    closeSessionMenus();
 
     try {
       const restoredSession = await restoreSessionGroupFromTrash(sessionId);
@@ -445,7 +497,7 @@ export function ManagerApp() {
     }
 
     setBusyKey(`permanent-delete:${sessionId}`);
-    setOpenSessionMenuId(null);
+    closeSessionMenus();
 
     try {
       await deleteSessionGroupPermanently(sessionId);
@@ -466,7 +518,7 @@ export function ManagerApp() {
     }
 
     setBusyKey("empty-trash");
-    setOpenSessionMenuId(null);
+    closeSessionMenus();
 
     try {
       const removedCount = await emptyTrash();
@@ -560,6 +612,7 @@ export function ManagerApp() {
     setDragOverTabId(null);
     setIsTabDropAtEnd(false);
     setShowMoreActions(false);
+    closeSessionMenus();
   }
 
   function handleTabDragStart(
@@ -577,6 +630,7 @@ export function ManagerApp() {
     setDraggedTabId(tabId);
     setDraggedSessionId(null);
     setDragOverSessionId(null);
+    closeSessionMenus();
   }
 
   function handleSessionDragOver(
@@ -731,10 +785,6 @@ export function ManagerApp() {
     importInputRef.current?.click();
   }
 
-  function toggleSessionMenu(sessionId: string) {
-    setOpenSessionMenuId((current) => (current === sessionId ? null : sessionId));
-  }
-
   async function handleOpenOptions() {
     await chrome.runtime.openOptionsPage();
   }
@@ -870,7 +920,11 @@ export function ManagerApp() {
             {isActiveExpanded ? (
               <ul className="manager-tree__children">
                 {sessionCollections.activeSessions.map((session) => (
-                  <li key={session.id}>
+                  <li
+                    className={`manager-tree__item ${hoveredActiveSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""}`}
+                    key={session.id}
+                    onBlur={(event) => handleActiveSessionItemBlur(event, session.id)}
+                  >
                     <div className="manager-tree__node-row">
                       <button
                         className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "active" ? "manager-tree__node--selected" : ""} ${dragOverSessionId === session.id ? "manager-tree__node--drop-target" : ""} ${draggedSessionId === session.id ? "manager-tree__node--dragging" : ""}`}
@@ -891,22 +945,29 @@ export function ManagerApp() {
                         <span className="manager-tree__count">{session.tabCount}</span>
                       </button>
                       <button
-                        aria-label={`更多操作：${session.title}`}
+                        aria-expanded={hoveredActiveSessionMenuId === session.id}
+                        aria-haspopup="menu"
+                        aria-label={`分组操作：${session.title}`}
                         className="manager-tree__menu-trigger"
                         onClick={(event) => {
                           event.stopPropagation();
-                          toggleSessionMenu(session.id);
+                          toggleActiveSessionMenu(session.id);
                         }}
                         type="button"
                       >
-                        ⋯
+                        ...
                       </button>
                     </div>
-                    {openSessionMenuId === session.id ? (
-                      <div className="manager-tree__menu">
+                    {hoveredActiveSessionMenuId === session.id ? (
+                      <div
+                        aria-label={`分组操作：${session.title}`}
+                        className="manager-tree__menu manager-tree__menu--popover"
+                        role="menu"
+                      >
                         <button
                           className="manager-tree__menu-item"
                           onClick={() => void handleRenameGroup(session.id, session.title)}
+                          role="menuitem"
                           type="button"
                         >
                           重命名
@@ -914,6 +975,7 @@ export function ManagerApp() {
                         <button
                           className="manager-tree__menu-item"
                           onClick={() => void handleTogglePin(session.id)}
+                          role="menuitem"
                           type="button"
                         >
                           {session.pinned ? "取消固定" : "固定分组"}
@@ -921,6 +983,7 @@ export function ManagerApp() {
                         <button
                           className="manager-tree__menu-item"
                           onClick={() => void handleMoveGroupToTrash(session.id)}
+                          role="menuitem"
                           type="button"
                         >
                           移到回收站
@@ -957,7 +1020,11 @@ export function ManagerApp() {
             {isTrashExpanded ? (
               <ul className="manager-tree__children">
                 {sessionCollections.trashedSessions.map((session) => (
-                  <li key={session.id}>
+                  <li
+                    className={`manager-tree__item ${hoveredTrashSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""}`}
+                    key={session.id}
+                    onBlur={(event) => handleTrashSessionItemBlur(event, session.id)}
+                  >
                     <div className="manager-tree__node-row">
                       <button
                         className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "trash" ? "manager-tree__node--selected" : ""}`}
@@ -969,22 +1036,29 @@ export function ManagerApp() {
                         <span className="manager-tree__count">{session.tabCount}</span>
                       </button>
                       <button
-                        aria-label={`更多操作：${session.title}`}
+                        aria-expanded={hoveredTrashSessionMenuId === session.id}
+                        aria-haspopup="menu"
+                        aria-label={`回收站分组操作：${session.title}`}
                         className="manager-tree__menu-trigger"
                         onClick={(event) => {
                           event.stopPropagation();
-                          toggleSessionMenu(session.id);
+                          toggleTrashSessionMenu(session.id);
                         }}
                         type="button"
                       >
-                        ⋯
+                        ...
                       </button>
                     </div>
-                    {openSessionMenuId === session.id ? (
-                      <div className="manager-tree__menu">
+                    {hoveredTrashSessionMenuId === session.id ? (
+                      <div
+                        aria-label={`回收站分组操作：${session.title}`}
+                        className="manager-tree__menu manager-tree__menu--popover"
+                        role="menu"
+                      >
                         <button
                           className="manager-tree__menu-item"
                           onClick={() => void handleRestoreGroupFromTrash(session.id)}
+                          role="menuitem"
                           type="button"
                         >
                           恢复分组
@@ -992,6 +1066,7 @@ export function ManagerApp() {
                         <button
                           className="manager-tree__menu-item"
                           onClick={() => void handleDeleteSessionPermanently(session.id)}
+                          role="menuitem"
                           type="button"
                         >
                           永久删除

@@ -1,9 +1,10 @@
 # Runtime Flows
 
 - Scope: TabVault MVP 的关键运行时流程、失败处理与设置更新路径
-- Last updated: 2026-04-19
+- Last updated: 2026-05-24
 - Related files:
   - `src/background/service-worker.ts`
+  - `src/domain/sessions/select-page-target-groups.ts`
   - `src/features/settings/persistence-directory.ts`
   - `src/storage/root-state/config.ts`
   - `src/storage/file-system/repository.ts`
@@ -71,6 +72,20 @@
 4. 写入 root state
 5. 只关闭被成功收纳的选中标签
 6. 未选中标签保持打开
+
+## 4.1 Send Page To Existing Group
+
+### Flow
+
+1. Background 注册页面右键菜单
+2. 固定分组来自 `pinned === true` 的 active sessions，不受最近分组数量限制
+3. 最近分组来自非固定 active sessions，并按配置数量限制
+4. 用户在页面右键菜单中选择固定分组或最近分组
+5. feature 将当前页面追加到目标组，随后尝试关闭原标签
+
+### Data Rule
+
+- 固定分组复用 `SessionGroup.pinned` 字段；读取旧数据时缺失字段迁移为 `false`，不清空已有保存数据
 
 ## 5. Restore Session Group
 

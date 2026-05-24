@@ -12,6 +12,7 @@ export function HelpApp() {
         <ul className="list">
           <li className="list__item">Open TabVault: open the manager page.</li>
           <li className="list__item">Send tabs actions: capture tabs into a new TabVault session group.</li>
+          <li className="list__item">Fixed Groups: send the current page into a pinned long-lived group.</li>
           <li className="list__item">Recent Groups: send the current page into one of the recent session groups.</li>
           <li className="list__item">
             Exclude current site: send all tabs in the current window except tabs on the same site as the current page.

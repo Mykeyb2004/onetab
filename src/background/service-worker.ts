@@ -16,8 +16,7 @@ import {
   getBrowserTabsToTheRight,
   getHighlightedBrowserTabs
 } from "../domain/tabs/select-browser-tabs";
-import { splitSessionGroups } from "../domain/sessions/session-groups";
-import { sortSessionGroups } from "../domain/sessions/sort-session-groups";
+import { selectPageTargetGroups } from "../domain/sessions/select-page-target-groups";
 import { bootstrapRootState, readRootState } from "../storage/local/repository";
 import {
   bootstrapRootStateStorageConfig,
@@ -25,7 +24,6 @@ import {
 } from "../storage/root-state/config";
 import type { RuntimeMessage, RuntimeResponse } from "../shared/messages";
 import type { BrowserTab } from "../types/browser";
-import type { SessionGroup } from "../types/session";
 
 const CONTEXT_MENU_IDS = {
   actionCaptureCurrentWindow: "tabvault.action.capture-current-window",
@@ -41,6 +39,8 @@ const CONTEXT_MENU_IDS = {
   pageCaptureTabsToRight: "tabvault.page.capture-tabs-right",
   pageCaptureAllWindows: "tabvault.page.capture-all-windows",
   pageCaptureExcludeCurrentSite: "tabvault.page.capture-exclude-current-site",
+  pagePinnedGroupsRoot: "tabvault.page.pinned-groups",
+  pagePinnedGroupsEmpty: "tabvault.page.pinned-groups.empty",
   pageRecentGroupsRoot: "tabvault.page.recent-groups",
   pageRecentGroupsEmpty: "tabvault.page.recent-groups.empty",
   pageHelp: "tabvault.page.help",
@@ -49,6 +49,7 @@ const CONTEXT_MENU_IDS = {
   pageSeparatorTertiary: "tabvault.page.separator-tertiary"
 } as const;
 
+const PINNED_GROUP_MENU_PREFIX = "tabvault.page.pinned-groups.item:";
 const RECENT_GROUP_MENU_PREFIX = "tabvault.page.recent-groups.item:";
 const RECENT_GROUP_LIMIT = 5;
 
@@ -56,7 +57,6 @@ interface PageContextData {
   currentTab: BrowserTab | null;
   currentWindowTabs: BrowserTab[];
   allTabs: BrowserTab[];
-  recentSessions: SessionGroup[];
 }
 
 async function openManagerPage(): Promise<void> {
@@ -73,18 +73,12 @@ async function openHelpPage(): Promise<void> {
 
 async function getPageContextData(tab: chrome.tabs.Tab | undefined): Promise<PageContextData> {
   const currentTab = toBrowserTab(tab ?? ({} as chrome.tabs.Tab));
-  const state = await readRootState(chromeLocalStorage);
-  const recentSessions = sortSessionGroups(splitSessionGroups(state.sessions).activeSessions).slice(
-    0,
-    RECENT_GROUP_LIMIT
-  );
 
   if (!currentTab) {
     return {
       currentTab: null,
       currentWindowTabs: [],
-      allTabs: [],
-      recentSessions
+      allTabs: []
     };
   }
 
@@ -96,8 +90,7 @@ async function getPageContextData(tab: chrome.tabs.Tab | undefined): Promise<Pag
   return {
     currentTab,
     currentWindowTabs,
-    allTabs,
-    recentSessions
+    allTabs
   };
 }
 
@@ -128,10 +121,9 @@ async function ensureContextMenus(): Promise<void> {
     contexts: ["action"]
   });
 
-  const recentSessions = sortSessionGroups(splitSessionGroups(state.sessions).activeSessions).slice(
-    0,
-    RECENT_GROUP_LIMIT
-  );
+  const { pinnedGroups, recentGroups } = selectPageTargetGroups(state.sessions, {
+    recentLimit: RECENT_GROUP_LIMIT
+  });
 
   await createContextMenu({
     id: CONTEXT_MENU_IDS.pageRoot,
@@ -224,14 +216,41 @@ async function ensureContextMenus(): Promise<void> {
   });
 
   await createContextMenu({
+    id: CONTEXT_MENU_IDS.pagePinnedGroupsRoot,
+    parentId: CONTEXT_MENU_IDS.pageRoot,
+    title: "Fixed Groups",
+    contexts: ["page"],
+    enabled: pinnedGroups.length > 0
+  });
+
+  if (pinnedGroups.length === 0) {
+    await createContextMenu({
+      id: CONTEXT_MENU_IDS.pagePinnedGroupsEmpty,
+      parentId: CONTEXT_MENU_IDS.pagePinnedGroupsRoot,
+      title: "No Fixed Groups",
+      contexts: ["page"],
+      enabled: false
+    });
+  }
+
+  for (const pinnedGroup of pinnedGroups) {
+    await createContextMenu({
+      id: `${PINNED_GROUP_MENU_PREFIX}${pinnedGroup.id}`,
+      parentId: CONTEXT_MENU_IDS.pagePinnedGroupsRoot,
+      title: pinnedGroup.title,
+      contexts: ["page"]
+    });
+  }
+
+  await createContextMenu({
     id: CONTEXT_MENU_IDS.pageRecentGroupsRoot,
     parentId: CONTEXT_MENU_IDS.pageRoot,
     title: "Recent Groups",
     contexts: ["page"],
-    enabled: recentSessions.length > 0
+    enabled: recentGroups.length > 0
   });
 
-  if (recentSessions.length === 0) {
+  if (recentGroups.length === 0) {
     await createContextMenu({
       id: CONTEXT_MENU_IDS.pageRecentGroupsEmpty,
       parentId: CONTEXT_MENU_IDS.pageRecentGroupsRoot,
@@ -241,7 +260,7 @@ async function ensureContextMenus(): Promise<void> {
     });
   }
 
-  for (const recentSession of recentSessions) {
+  for (const recentSession of recentGroups) {
     await createContextMenu({
       id: `${RECENT_GROUP_MENU_PREFIX}${recentSession.id}`,
       parentId: CONTEXT_MENU_IDS.pageRecentGroupsRoot,
@@ -306,7 +325,7 @@ async function executeCaptureBrowserTabsAction(browserTabs: BrowserTab[]) {
   );
 }
 
-async function executeAddCurrentPageToRecentGroupAction(
+async function executeAddCurrentPageToSessionGroupAction(
   sessionId: string,
   browserTab: BrowserTab | null
 ) {
@@ -449,8 +468,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 
   if (menuItemId.startsWith(RECENT_GROUP_MENU_PREFIX)) {
-    await executeAddCurrentPageToRecentGroupAction(
+    await executeAddCurrentPageToSessionGroupAction(
       menuItemId.slice(RECENT_GROUP_MENU_PREFIX.length),
+      currentTab
+    );
+  }
+
+  if (menuItemId.startsWith(PINNED_GROUP_MENU_PREFIX)) {
+    await executeAddCurrentPageToSessionGroupAction(
+      menuItemId.slice(PINNED_GROUP_MENU_PREFIX.length),
       currentTab
     );
   }
