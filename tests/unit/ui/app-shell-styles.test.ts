@@ -51,10 +51,13 @@ describe("shared app shell styles", () => {
       /className="button button--quiet manager-sidebar__rail-toggle"[\s\S]*className="manager-sidebar__rail-toggle-icon"/
     );
     expect(css).toMatch(
-      /\.manager-workbench\[data-sidebar-preference="collapsed"\]\s*\{[\s\S]*grid-template-columns:\s*84px minmax\(0,\s*1fr\);[\s\S]*\}/
+      /\.manager-workbench\[data-sidebar-preference="collapsed"\]\s*\{[\s\S]*grid-template-columns:\s*48px minmax\(0,\s*1fr\);[\s\S]*\}/
     );
     expect(css).toMatch(
       /\.manager-sidebar__rail-toggle\s*\{[\s\S]*width:\s*32px;[\s\S]*padding:\s*0;[\s\S]*\}/
+    );
+    expect(css).toMatch(
+      /\.manager-workbench\[data-sidebar-preference="collapsed"\]\s*\.manager-sidebar__rail-toggle\s*\{[\s\S]*width:\s*32px;[\s\S]*height:\s*32px;[\s\S]*min-height:\s*32px;[\s\S]*\}/
     );
     expect(css).toMatch(
       /\.manager-sidebar__rail-toggle-icon\s*\{[\s\S]*font-size:\s*18px;[\s\S]*line-height:\s*1;[\s\S]*\}/
