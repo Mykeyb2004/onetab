@@ -11,6 +11,9 @@
     "service_worker": "assets/background.js",
     "type": "module"
   },
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
   "options_page": "options.html",
   "permissions": ["tabs", "storage", "contextMenus", "notifications"],
   "commands": {

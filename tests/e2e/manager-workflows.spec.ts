@@ -109,23 +109,27 @@ test("manager can search, rename, pin, and delete seeded sessions", async ({
   const managerPage = await context.newPage();
   await seedManagerState(extensionId, managerPage);
 
-  await managerPage.getByLabel("Search group name, tab title, or URL").fill("research");
-  await expect(managerPage.getByText("Research Bundle")).toBeVisible();
+  await managerPage.getByLabel("搜索分组、标题或 URL").fill("research");
+  await expect(managerPage.getByRole("heading", { name: "Research Bundle" })).toBeVisible();
 
   managerPage.once("dialog", async (dialog) => {
     await dialog.accept("Renamed Bundle");
   });
-  await managerPage.getByRole("button", { name: "Rename" }).click();
-  await expect(managerPage.getByText("Renamed Bundle")).toBeVisible();
+  await managerPage.getByRole("button", { name: "分组操作：Research Bundle" }).click();
+  await managerPage.getByRole("menuitem", { name: "重命名" }).click();
+  await expect(managerPage.getByRole("heading", { name: "Renamed Bundle" })).toBeVisible();
 
-  await managerPage.getByRole("button", { name: "Pin" }).click();
-  await expect(managerPage.getByText("Pinned · Renamed Bundle")).toBeVisible();
+  await managerPage.getByRole("button", { name: "分组操作：Renamed Bundle" }).click();
+  await managerPage.getByRole("menuitem", { name: "固定分组" }).click();
+  await expect(managerPage.getByRole("heading", { name: "📌 Renamed Bundle" })).toBeVisible();
 
   managerPage.once("dialog", async (dialog) => {
     await dialog.accept();
   });
-  await managerPage.getByRole("button", { name: "Delete Group" }).click();
-  await expect(managerPage.getByText("No saved sessions yet.")).toBeVisible();
+  await managerPage.getByRole("button", { name: "分组操作：Renamed Bundle" }).click();
+  await managerPage.getByRole("menuitem", { name: "移到回收站" }).click();
+  await managerPage.getByRole("button", { name: /回收站/ }).first().click();
+  await expect(managerPage.getByRole("heading", { name: "📌 Renamed Bundle" })).toBeVisible();
 });
 
 test("manager can restore a tab from seeded session state", async ({
@@ -135,9 +139,10 @@ test("manager can restore a tab from seeded session state", async ({
   const managerPage = await context.newPage();
   await seedManagerState(extensionId, managerPage);
 
-  await managerPage.getByRole("button", { name: "Restore Tab" }).first().click();
-  await expect(managerPage.getByText(/Restored 1 tab/)).toBeVisible();
+  await managerPage.locator(".manager-tab-card__body").first().focus();
+  await managerPage.locator('button[aria-label="还原并移除 “React Compiler”"]').click();
   await expect(managerPage.getByText("Testing Docs")).toBeVisible();
+  await expect(managerPage.getByText("React Compiler")).toHaveCount(0);
 });
 
 test("manager keeps the sidebar visible while the tab list scrolls", async ({
@@ -216,7 +221,8 @@ test("manager persists the selected grid density after reload", async ({
     createSeededSession("session-1", "Long Session", 6)
   ]);
 
-  await managerPage.getByRole("button", { name: "简洁" }).click();
+  await expect(managerPage.locator(".manager-density-toggle")).toBeVisible();
+  await managerPage.locator(".manager-density-toggle").getByRole("button", { name: "简洁" }).click();
   await expectGridDensity(managerPage, "compact");
 
   await managerPage.reload();
@@ -261,14 +267,13 @@ test("manager exposes icon actions on focused cards without triggering drag", as
   const firstCardBody = managerPage.locator(".manager-tab-card__body").first();
   await firstCardBody.focus();
 
-  await expect(
-    managerPage.getByRole("button", { name: "还原并移除 “React Compiler Tab 1”" })
-  ).toBeVisible();
+  await expect(managerPage.locator('button[aria-label="还原并移除 “React Compiler”"]')).toBeVisible();
   await managerPage
-    .getByRole("button", { name: "还原并移除 “React Compiler Tab 1”" })
+    .locator('button[aria-label="还原并移除 “React Compiler”"]')
     .click();
 
-  await expect(managerPage.getByText(/Restored 1 tab/)).toBeVisible();
+  await expect(managerPage.getByText("Testing Docs")).toBeVisible();
+  await expect(managerPage.getByText("React Compiler")).toHaveCount(0);
 });
 
 test("manager hides the restore action for pinned groups", async ({
@@ -283,14 +288,13 @@ test("manager hides the restore action for pinned groups", async ({
     }
   ]);
 
+  await expect(managerPage.getByRole("heading", { name: "Pinned Research" })).toBeVisible();
   const firstCardBody = managerPage.locator(".manager-tab-card__body").first();
   await firstCardBody.focus();
 
-  await expect(managerPage.getByRole("button", { name: "打开 “Pinned Research Tab 1”" })).toBeVisible();
-  await expect(managerPage.getByRole("button", { name: "删除 “Pinned Research Tab 1”" })).toBeVisible();
-  await expect(
-    managerPage.getByRole("button", { name: "还原并移除 “Pinned Research Tab 1”" })
-  ).toHaveCount(0);
+  await expect(managerPage.locator('button[aria-label="打开 “Pinned Research Tab 1”"]')).toBeVisible();
+  await expect(managerPage.locator('button[aria-label="删除 “Pinned Research Tab 1”"]')).toBeVisible();
+  await expect(managerPage.locator('button[aria-label="还原并移除 “Pinned Research Tab 1”"]')).toHaveCount(0);
 });
 
 test("manager opens the saved tab when the card body is clicked", async ({

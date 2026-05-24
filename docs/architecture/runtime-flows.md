@@ -25,6 +25,20 @@
 - storage 初始化失败时记录错误，并停止后续副作用
 - context menu 注册失败不应破坏已有持久化数据
 
+## 1.1 New Tab Entry Shell
+
+### Flow
+
+1. 用户打开浏览器新标签页或新窗口首个页
+2. Chrome 通过 `chrome_url_overrides.newtab` 加载 `newtab.html`
+3. new tab 页面读取最小会话摘要
+4. 用户可直接恢复最近分组，或跳转到 manager / settings
+
+### Failure Handling
+
+- 如果本地状态读取失败，new tab 页面显示降级提示，不影响后续打开 manager
+- new tab 页面只做轻量状态读取，不承担完整 manager 的重交互恢复
+
 ## 2. Capture Current Window
 
 ### Flow

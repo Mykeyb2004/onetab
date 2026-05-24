@@ -43,6 +43,18 @@
 - 若用户主动选择目录，`chrome.storage.local` 仅保留存储配置和同步信号
 - 不上传服务端
 
+### `chrome_url_overrides.newtab`
+
+用途：
+
+- 将 TabVault 的 `newtab.html` 作为浏览器默认新标签页入口壳
+
+限制：
+
+- 由 Manifest 静态声明控制，不能通过运行时设置关闭
+- 在 incognito 中不生效
+- 不应用于普通网页导航劫持
+
 ### File System Access API
 
 用途：

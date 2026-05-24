@@ -5,7 +5,7 @@ test.skip(
   "Set RUN_EXTENSION_E2E=1 when running browser-backed extension E2E on a machine with Chrome access."
 );
 
-test("loads popup and manager pages for the unpacked extension", async ({
+test("loads popup, manager, and newtab pages for the unpacked extension", async ({
   context,
   extensionId
 }) => {
@@ -18,6 +18,12 @@ test("loads popup and manager pages for the unpacked extension", async ({
   const managerPage = await context.newPage();
   await managerPage.goto(`chrome-extension://${extensionId}/manager.html`);
 
-  await expect(managerPage.getByRole("heading", { name: "Session Manager" })).toBeVisible();
-  await expect(managerPage.getByLabel("Search group name, tab title, or URL")).toBeVisible();
+  await expect(managerPage.getByRole("heading", { name: "TabVault Manager" })).toBeVisible();
+  await expect(managerPage.getByPlaceholder("搜索分组、标题或 URL")).toBeVisible();
+
+  const newTabPage = await context.newPage();
+  await newTabPage.goto("chrome://newtab/");
+
+  await expect(newTabPage.getByRole("heading", { name: "New Tab" })).toBeVisible();
+  await expect(newTabPage.getByRole("button", { name: "Open Manager" })).toBeVisible();
 });
