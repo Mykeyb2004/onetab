@@ -867,7 +867,6 @@ export function ManagerApp() {
 
   return (
     <AppShell
-      eyebrow="Manager"
       title="TabVault Manager"
       titleIcon={
         <img
