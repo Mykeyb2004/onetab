@@ -15,7 +15,8 @@ export const defaultSettings: ExtensionSettings = {
   defaultClickAction: "capture-current-window",
   showCaptureFeedback: true,
   enableContextMenu: true,
-  managerGridDensityPreference: "enhanced"
+  managerGridDensityPreference: "enhanced",
+  managerSidebarPreference: "expanded"
 };
 
 export function createDefaultRootState(): RootState {
@@ -120,7 +121,9 @@ export function migrateRootState(input: unknown): RootState {
             ? input.settings.enableContextMenu
             : true,
         managerGridDensityPreference:
-          input.settings.managerGridDensityPreference === "compact" ? "compact" : "enhanced"
+          input.settings.managerGridDensityPreference === "compact" ? "compact" : "enhanced",
+        managerSidebarPreference:
+          input.settings.managerSidebarPreference === "collapsed" ? "collapsed" : "expanded"
       }
     : { ...defaultSettings };
 

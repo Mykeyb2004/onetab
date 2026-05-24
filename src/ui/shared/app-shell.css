@@ -331,10 +331,50 @@ input[type="radio"] {
   padding: 14px 12px;
 }
 
+.manager-sidebar__toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.manager-sidebar__rail-toggle {
+  min-height: 32px;
+  white-space: normal;
+  text-align: center;
+}
+
 .manager-sidebar__section {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.manager-workbench[data-sidebar-preference="collapsed"] {
+  grid-template-columns: 84px minmax(0, 1fr);
+}
+
+.manager-workbench[data-sidebar-preference="collapsed"] .manager-sidebar {
+  gap: 0;
+  align-items: stretch;
+}
+
+.manager-workbench[data-sidebar-preference="collapsed"] .manager-sidebar.card {
+  padding: 14px 8px;
+}
+
+.manager-workbench[data-sidebar-preference="collapsed"] .manager-sidebar__toolbar {
+  flex: 1 1 auto;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.manager-workbench[data-sidebar-preference="collapsed"] .manager-sidebar__rail-toggle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 96px;
+  padding: 12px 6px;
 }
 
 .manager-tree__section,
@@ -836,6 +876,20 @@ input[type="radio"] {
   .manager-main {
     overflow: visible;
     padding-right: 0;
+  }
+
+  .manager-workbench[data-sidebar-preference="collapsed"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .manager-workbench[data-sidebar-preference="collapsed"] .manager-sidebar.card {
+    padding: 14px 12px;
+  }
+
+  .manager-workbench[data-sidebar-preference="collapsed"] .manager-sidebar__rail-toggle {
+    height: auto;
+    min-height: 0;
+    padding: 10px 12px;
   }
 
   .session-card__header,

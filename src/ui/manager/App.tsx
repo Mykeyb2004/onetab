@@ -29,7 +29,10 @@ import { saveSettings } from "../../features/settings/save-settings";
 import { isSessionGroupTrashed } from "../../domain/sessions/session-groups";
 import { ROOT_STATE_STORAGE_CONFIG_KEY } from "../../storage/root-state/config";
 import type { SearchHit } from "../../types/search";
-import type { ManagerGridDensityPreference } from "../../types/settings";
+import type {
+  ManagerGridDensityPreference,
+  ManagerSidebarPreference
+} from "../../types/settings";
 import type { SessionGroup } from "../../types/session";
 import { AppShell } from "../shared/AppShell";
 import { ManagerTabGrid } from "./ManagerTabGrid";
@@ -158,6 +161,8 @@ export function ManagerApp() {
   const [query, setQuery] = useState("");
   const [densityPreference, setDensityPreference] =
     useState<ManagerGridDensityPreference>("enhanced");
+  const [sidebarPreference, setSidebarPreference] =
+    useState<ManagerSidebarPreference>("expanded");
   const [managerMainWidth, setManagerMainWidth] = useState(0);
   const [showImportExportTools, setShowImportExportTools] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
@@ -241,6 +246,7 @@ export function ManagerApp() {
         setSelectedBucket(nextSelection.bucket);
         setSelectedSessionId(nextSelection.sessionId);
         setDensityPreference(settings.managerGridDensityPreference);
+        setSidebarPreference(settings.managerSidebarPreference);
         setStatus(
           `已加载 ${collections.activeSessions.length} 个分组，回收站中有 ${collections.trashedSessions.length} 个分组。`
         );
@@ -276,6 +282,7 @@ export function ManagerApp() {
         .then(async () => {
           const settings = await loadExtensionSettings();
           setDensityPreference(settings.managerGridDensityPreference);
+          setSidebarPreference(settings.managerSidebarPreference);
           setStatus("Session Manager 已同步最新分组内容。");
         })
         .catch((nextError: unknown) => {
@@ -460,6 +467,25 @@ export function ManagerApp() {
     } catch (nextError: unknown) {
       setDensityPreference(previousPreference);
       setStatus(nextError instanceof Error ? nextError.message : "保存卡片密度偏好失败。");
+    }
+  }
+
+  async function handleSidebarPreferenceChange(nextPreference: ManagerSidebarPreference) {
+    if (nextPreference === sidebarPreference) {
+      return;
+    }
+
+    const previousPreference = sidebarPreference;
+    setShowMoreActions(false);
+    closeSessionMenus();
+    setSidebarPreference(nextPreference);
+
+    try {
+      await saveSettings({ managerSidebarPreference: nextPreference });
+      setStatus(nextPreference === "collapsed" ? "已折叠左侧边栏。" : "已展开左侧边栏。");
+    } catch (nextError: unknown) {
+      setSidebarPreference(previousPreference);
+      setStatus(nextError instanceof Error ? nextError.message : "保存边栏偏好失败。");
     }
   }
 
@@ -962,190 +988,210 @@ export function ManagerApp() {
         {liveStatusMessage}
       </div>
 
-      <div className="manager-workbench">
+      <div className="manager-workbench" data-sidebar-preference={sidebarPreference}>
         <aside className="manager-sidebar card">
-          <div className="manager-sidebar__section">
+          <div className="manager-sidebar__toolbar">
             <button
-              className={`manager-tree__section ${selectedBucket === "active" ? "manager-tree__section--active" : ""}`}
-              onClick={() => selectBucket("active")}
+              aria-expanded={sidebarPreference === "expanded"}
+              aria-label={sidebarPreference === "expanded" ? "折叠边栏" : "展开边栏"}
+              className="button button--quiet manager-sidebar__rail-toggle"
+              onClick={() =>
+                void handleSidebarPreferenceChange(
+                  sidebarPreference === "expanded" ? "collapsed" : "expanded"
+                )
+              }
               type="button"
             >
-              <span className="manager-tree__section-title">
-                <span>{isActiveExpanded ? "▾" : "▸"}</span>
-                <span>全部</span>
-              </span>
-              <span className="manager-tree__count">{activeTabCount}</span>
+              {sidebarPreference === "expanded" ? "折叠边栏" : "展开边栏"}
             </button>
-
-            <button
-              className="manager-tree__toggle"
-              onClick={() => setIsActiveExpanded((current) => !current)}
-              type="button"
-            >
-              {isActiveExpanded ? "收起" : "展开"}
-            </button>
-
-            {isActiveExpanded ? (
-              <ul className="manager-tree__children">
-                {sessionCollections.activeSessions.map((session) => (
-                  <li
-                    className={`manager-tree__item ${hoveredActiveSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""}`}
-                    key={session.id}
-                    onBlur={(event) => handleActiveSessionItemBlur(event, session.id)}
-                  >
-                    <div className="manager-tree__node-row">
-                      <button
-                        className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "active" ? "manager-tree__node--selected" : ""} ${dragOverSessionId === session.id ? "manager-tree__node--drop-target" : ""} ${draggedSessionId === session.id ? "manager-tree__node--dragging" : ""}`}
-                        id={`session-node-${session.id}`}
-                        draggable
-                        onDragEnd={clearDragState}
-                        onDragLeave={handleSessionDragLeave}
-                        onDragOver={(event) => handleSessionDragOver(event, session.id)}
-                        onDragStart={(event) => handleSessionDragStart(event, session.id)}
-                        onDrop={(event) => void handleSessionDrop(event, session.id)}
-                        onClick={() => selectSession("active", session.id)}
-                        type="button"
-                      >
-                        <span className="manager-tree__node-title">
-                          {session.pinned ? "📌 " : ""}
-                          {session.title}
-                        </span>
-                        <span className="manager-tree__count">{session.tabCount}</span>
-                      </button>
-                      <button
-                        aria-expanded={hoveredActiveSessionMenuId === session.id}
-                        aria-haspopup="menu"
-                        aria-label={`分组操作：${session.title}`}
-                        className="manager-tree__menu-trigger"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          toggleActiveSessionMenu(session.id);
-                        }}
-                        type="button"
-                      >
-                        ...
-                      </button>
-                    </div>
-                    {hoveredActiveSessionMenuId === session.id ? (
-                      <div
-                        aria-label={`分组操作：${session.title}`}
-                        className="manager-tree__menu manager-tree__menu--popover"
-                        role="menu"
-                      >
-                        <button
-                          className="manager-tree__menu-item"
-                          onClick={() => void handleRenameGroup(session.id, session.title)}
-                          role="menuitem"
-                          type="button"
-                        >
-                          重命名
-                        </button>
-                        <button
-                          className="manager-tree__menu-item"
-                          onClick={() => void handleTogglePin(session.id)}
-                          role="menuitem"
-                          type="button"
-                        >
-                          {session.pinned ? "取消固定" : "固定分组"}
-                        </button>
-                        <button
-                          className="manager-tree__menu-item"
-                          onClick={() => void handleMoveGroupToTrash(session.id)}
-                          role="menuitem"
-                          type="button"
-                        >
-                          移到回收站
-                        </button>
-                      </div>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
           </div>
 
-          <div className="manager-sidebar__section">
-            <button
-              className={`manager-tree__section ${selectedBucket === "trash" ? "manager-tree__section--active" : ""}`}
-              onClick={() => selectBucket("trash")}
-              type="button"
-            >
-              <span className="manager-tree__section-title">
-                <span>{isTrashExpanded ? "▾" : "▸"}</span>
-                <span>回收站</span>
-              </span>
-              <span className="manager-tree__count">{sessionCollections.trashedSessions.length}</span>
-            </button>
+          {sidebarPreference === "expanded" ? (
+            <>
+              <div className="manager-sidebar__section">
+                <button
+                  className={`manager-tree__section ${selectedBucket === "active" ? "manager-tree__section--active" : ""}`}
+                  onClick={() => selectBucket("active")}
+                  type="button"
+                >
+                  <span className="manager-tree__section-title">
+                    <span>{isActiveExpanded ? "▾" : "▸"}</span>
+                    <span>全部</span>
+                  </span>
+                  <span className="manager-tree__count">{activeTabCount}</span>
+                </button>
 
-            <button
-              className="manager-tree__toggle"
-              onClick={() => setIsTrashExpanded((current) => !current)}
-              type="button"
-            >
-              {isTrashExpanded ? "收起" : "展开"}
-            </button>
+                <button
+                  className="manager-tree__toggle"
+                  onClick={() => setIsActiveExpanded((current) => !current)}
+                  type="button"
+                >
+                  {isActiveExpanded ? "收起" : "展开"}
+                </button>
 
-            {isTrashExpanded ? (
-              <ul className="manager-tree__children">
-                {sessionCollections.trashedSessions.map((session) => (
-                  <li
-                    className={`manager-tree__item ${hoveredTrashSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""}`}
-                    key={session.id}
-                    onBlur={(event) => handleTrashSessionItemBlur(event, session.id)}
-                  >
-                    <div className="manager-tree__node-row">
-                      <button
-                        className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "trash" ? "manager-tree__node--selected" : ""}`}
-                        id={`session-node-${session.id}`}
-                        onClick={() => selectSession("trash", session.id)}
-                        type="button"
+                {isActiveExpanded ? (
+                  <ul className="manager-tree__children">
+                    {sessionCollections.activeSessions.map((session) => (
+                      <li
+                        className={`manager-tree__item ${hoveredActiveSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""}`}
+                        key={session.id}
+                        onBlur={(event) => handleActiveSessionItemBlur(event, session.id)}
                       >
-                        <span className="manager-tree__node-title">{session.title}</span>
-                        <span className="manager-tree__count">{session.tabCount}</span>
-                      </button>
-                      <button
-                        aria-expanded={hoveredTrashSessionMenuId === session.id}
-                        aria-haspopup="menu"
-                        aria-label={`回收站分组操作：${session.title}`}
-                        className="manager-tree__menu-trigger"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          toggleTrashSessionMenu(session.id);
-                        }}
-                        type="button"
+                        <div className="manager-tree__node-row">
+                          <button
+                            className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "active" ? "manager-tree__node--selected" : ""} ${dragOverSessionId === session.id ? "manager-tree__node--drop-target" : ""} ${draggedSessionId === session.id ? "manager-tree__node--dragging" : ""}`}
+                            id={`session-node-${session.id}`}
+                            draggable
+                            onDragEnd={clearDragState}
+                            onDragLeave={handleSessionDragLeave}
+                            onDragOver={(event) => handleSessionDragOver(event, session.id)}
+                            onDragStart={(event) => handleSessionDragStart(event, session.id)}
+                            onDrop={(event) => void handleSessionDrop(event, session.id)}
+                            onClick={() => selectSession("active", session.id)}
+                            type="button"
+                          >
+                            <span className="manager-tree__node-title">
+                              {session.pinned ? "📌 " : ""}
+                              {session.title}
+                            </span>
+                            <span className="manager-tree__count">{session.tabCount}</span>
+                          </button>
+                          <button
+                            aria-expanded={hoveredActiveSessionMenuId === session.id}
+                            aria-haspopup="menu"
+                            aria-label={`分组操作：${session.title}`}
+                            className="manager-tree__menu-trigger"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleActiveSessionMenu(session.id);
+                            }}
+                            type="button"
+                          >
+                            ...
+                          </button>
+                        </div>
+                        {hoveredActiveSessionMenuId === session.id ? (
+                          <div
+                            aria-label={`分组操作：${session.title}`}
+                            className="manager-tree__menu manager-tree__menu--popover"
+                            role="menu"
+                          >
+                            <button
+                              className="manager-tree__menu-item"
+                              onClick={() => void handleRenameGroup(session.id, session.title)}
+                              role="menuitem"
+                              type="button"
+                            >
+                              重命名
+                            </button>
+                            <button
+                              className="manager-tree__menu-item"
+                              onClick={() => void handleTogglePin(session.id)}
+                              role="menuitem"
+                              type="button"
+                            >
+                              {session.pinned ? "取消固定" : "固定分组"}
+                            </button>
+                            <button
+                              className="manager-tree__menu-item"
+                              onClick={() => void handleMoveGroupToTrash(session.id)}
+                              role="menuitem"
+                              type="button"
+                            >
+                              移到回收站
+                            </button>
+                          </div>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+
+              <div className="manager-sidebar__section">
+                <button
+                  className={`manager-tree__section ${selectedBucket === "trash" ? "manager-tree__section--active" : ""}`}
+                  onClick={() => selectBucket("trash")}
+                  type="button"
+                >
+                  <span className="manager-tree__section-title">
+                    <span>{isTrashExpanded ? "▾" : "▸"}</span>
+                    <span>回收站</span>
+                  </span>
+                  <span className="manager-tree__count">{sessionCollections.trashedSessions.length}</span>
+                </button>
+
+                <button
+                  className="manager-tree__toggle"
+                  onClick={() => setIsTrashExpanded((current) => !current)}
+                  type="button"
+                >
+                  {isTrashExpanded ? "收起" : "展开"}
+                </button>
+
+                {isTrashExpanded ? (
+                  <ul className="manager-tree__children">
+                    {sessionCollections.trashedSessions.map((session) => (
+                      <li
+                        className={`manager-tree__item ${hoveredTrashSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""}`}
+                        key={session.id}
+                        onBlur={(event) => handleTrashSessionItemBlur(event, session.id)}
                       >
-                        ...
-                      </button>
-                    </div>
-                    {hoveredTrashSessionMenuId === session.id ? (
-                      <div
-                        aria-label={`回收站分组操作：${session.title}`}
-                        className="manager-tree__menu manager-tree__menu--popover"
-                        role="menu"
-                      >
-                        <button
-                          className="manager-tree__menu-item"
-                          onClick={() => void handleRestoreGroupFromTrash(session.id)}
-                          role="menuitem"
-                          type="button"
-                        >
-                          恢复分组
-                        </button>
-                        <button
-                          className="manager-tree__menu-item"
-                          onClick={() => void handleDeleteSessionPermanently(session.id)}
-                          role="menuitem"
-                          type="button"
-                        >
-                          永久删除
-                        </button>
-                      </div>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
+                        <div className="manager-tree__node-row">
+                          <button
+                            className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "trash" ? "manager-tree__node--selected" : ""}`}
+                            id={`session-node-${session.id}`}
+                            onClick={() => selectSession("trash", session.id)}
+                            type="button"
+                          >
+                            <span className="manager-tree__node-title">{session.title}</span>
+                            <span className="manager-tree__count">{session.tabCount}</span>
+                          </button>
+                          <button
+                            aria-expanded={hoveredTrashSessionMenuId === session.id}
+                            aria-haspopup="menu"
+                            aria-label={`回收站分组操作：${session.title}`}
+                            className="manager-tree__menu-trigger"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleTrashSessionMenu(session.id);
+                            }}
+                            type="button"
+                          >
+                            ...
+                          </button>
+                        </div>
+                        {hoveredTrashSessionMenuId === session.id ? (
+                          <div
+                            aria-label={`回收站分组操作：${session.title}`}
+                            className="manager-tree__menu manager-tree__menu--popover"
+                            role="menu"
+                          >
+                            <button
+                              className="manager-tree__menu-item"
+                              onClick={() => void handleRestoreGroupFromTrash(session.id)}
+                              role="menuitem"
+                              type="button"
+                            >
+                              恢复分组
+                            </button>
+                            <button
+                              className="manager-tree__menu-item"
+                              onClick={() => void handleDeleteSessionPermanently(session.id)}
+                              role="menuitem"
+                              type="button"
+                            >
+                              永久删除
+                            </button>
+                          </div>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </>
+          ) : null}
         </aside>
 
         <section className="manager-main" ref={managerMainRef}>

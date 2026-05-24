@@ -40,6 +40,19 @@ describe("shared app shell styles", () => {
     );
   });
 
+  it("should let the manager workbench collapse the sidebar into a saved rail", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/ui/shared/app-shell.css"), "utf8");
+    const managerApp = readFileSync(resolve(process.cwd(), "src/ui/manager/App.tsx"), "utf8");
+
+    expect(managerApp).toContain('data-sidebar-preference={sidebarPreference}');
+    expect(css).toMatch(
+      /\.manager-workbench\[data-sidebar-preference="collapsed"\]\s*\{[\s\S]*grid-template-columns:\s*84px minmax\(0,\s*1fr\);[\s\S]*\}/
+    );
+    expect(css).toMatch(
+      /\.manager-sidebar__rail-toggle\s*\{[\s\S]*white-space:\s*normal;[\s\S]*text-align:\s*center;[\s\S]*\}/
+    );
+  });
+
   it("should render manager tabs as a responsive auto-fill grid", () => {
     const css = readFileSync(resolve(process.cwd(), "src/ui/shared/app-shell.css"), "utf8");
 

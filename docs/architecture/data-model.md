@@ -128,6 +128,7 @@ interface ExtensionSettings {
   showCaptureFeedback: boolean;
   enableContextMenu: boolean;
   managerGridDensityPreference: "compact" | "enhanced";
+  managerSidebarPreference: "expanded" | "collapsed";
 }
 ```
 
@@ -138,6 +139,7 @@ interface ExtensionSettings {
 - `showCaptureFeedback`: `true`
 - `enableContextMenu`: `true`
 - `managerGridDensityPreference`: `enhanced`
+- `managerSidebarPreference`: `expanded`
 
 ## 5. 导入导出模型
 

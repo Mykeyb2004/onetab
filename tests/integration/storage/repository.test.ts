@@ -35,6 +35,7 @@ describe("local repository", () => {
     expect(state.sessions).toEqual([]);
     expect(state.settings.restoreBehavior).toBe("remove-group");
     expect(state.settings.managerGridDensityPreference).toBe("enhanced");
+    expect(state.settings.managerSidebarPreference).toBe("expanded");
   });
 
   it("should append session groups and persist settings changes", async () => {
@@ -50,7 +51,8 @@ describe("local repository", () => {
     await updateSettings(storage, {
       defaultClickAction: "open-manager",
       enableContextMenu: false,
-      managerGridDensityPreference: "compact"
+      managerGridDensityPreference: "compact",
+      managerSidebarPreference: "collapsed"
     });
 
     const state = await readRootState(storage);
@@ -60,6 +62,7 @@ describe("local repository", () => {
     expect(state.settings.defaultClickAction).toBe("open-manager");
     expect(state.settings.enableContextMenu).toBe(false);
     expect(state.settings.managerGridDensityPreference).toBe("compact");
+    expect(state.settings.managerSidebarPreference).toBe("collapsed");
   });
 
   it("should migrate legacy saved sessions without clearing user data", async () => {
@@ -107,5 +110,6 @@ describe("local repository", () => {
     expect(state.settings.restoreBehavior).toBe("keep-group");
     expect(state.settings.enableContextMenu).toBe(true);
     expect(state.settings.managerGridDensityPreference).toBe("enhanced");
+    expect(state.settings.managerSidebarPreference).toBe("expanded");
   });
 });

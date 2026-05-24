@@ -82,7 +82,8 @@ async function seedManagerState(
             defaultClickAction: "capture-current-window",
             showCaptureFeedback: true,
             enableContextMenu: true,
-            managerGridDensityPreference: "enhanced"
+            managerGridDensityPreference: "enhanced",
+            managerSidebarPreference: "expanded"
           },
           sessions: nextSessions
         }
@@ -175,6 +176,35 @@ test("manager keeps the sidebar visible while the tab list scrolls", async ({
   expect(afterSidebarBox).not.toBeNull();
   expect(Math.abs((afterSidebarBox?.y ?? 0) - (beforeSidebarBox?.y ?? 0))).toBeLessThan(4);
   await expect(targetSession).toBeVisible();
+});
+
+test("manager remembers collapsed sidebar preference and restores the rail toggle", async ({
+  context,
+  extensionId
+}) => {
+  const managerPage = await context.newPage();
+  await seedManagerState(extensionId, managerPage, [
+    createSeededSession("session-1", "Research Bundle", 6),
+    createSeededSession("session-2", "Later Reading", 2)
+  ]);
+
+  const workbench = managerPage.locator(".manager-workbench");
+
+  await expect(workbench).toHaveAttribute("data-sidebar-preference", "expanded");
+  await expect(managerPage.locator("#session-node-session-1")).toBeVisible();
+
+  await managerPage.getByRole("button", { name: "折叠边栏" }).click();
+  await expect(workbench).toHaveAttribute("data-sidebar-preference", "collapsed");
+  await expect(managerPage.getByRole("button", { name: "展开边栏" })).toBeVisible();
+  await expect(managerPage.locator("#session-node-session-1")).toHaveCount(0);
+
+  await managerPage.reload();
+  await expect(workbench).toHaveAttribute("data-sidebar-preference", "collapsed");
+  await expect(managerPage.getByRole("button", { name: "展开边栏" })).toBeVisible();
+
+  await managerPage.getByRole("button", { name: "展开边栏" }).click();
+  await expect(workbench).toHaveAttribute("data-sidebar-preference", "expanded");
+  await expect(managerPage.locator("#session-node-session-1")).toBeVisible();
 });
 
 test("manager persists the selected grid density after reload", async ({
