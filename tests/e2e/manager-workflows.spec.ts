@@ -240,3 +240,42 @@ test("manager exposes icon actions on focused cards without triggering drag", as
 
   await expect(managerPage.getByText(/Restored 1 tab/)).toBeVisible();
 });
+
+test("manager hides the restore action for pinned groups", async ({
+  context,
+  extensionId
+}) => {
+  const managerPage = await context.newPage();
+  await seedManagerState(extensionId, managerPage, [
+    {
+      ...createSeededSession("session-1", "Pinned Research", 2),
+      pinned: true
+    }
+  ]);
+
+  const firstCard = managerPage.locator(".manager-tab-card").first();
+  await firstCard.focus();
+
+  await expect(managerPage.getByRole("button", { name: "打开 “Pinned Research Tab 1”" })).toBeVisible();
+  await expect(managerPage.getByRole("button", { name: "删除 “Pinned Research Tab 1”" })).toBeVisible();
+  await expect(
+    managerPage.getByRole("button", { name: "还原并移除 “Pinned Research Tab 1”" })
+  ).toHaveCount(0);
+});
+
+test("manager opens the saved tab when the card body is clicked", async ({
+  context,
+  extensionId
+}) => {
+  const managerPage = await context.newPage();
+  await seedManagerState(extensionId, managerPage);
+
+  const openedPagePromise = context.waitForEvent("page");
+  await managerPage.locator(".manager-tab-card__body").first().click();
+
+  const openedPage = await openedPagePromise;
+  await openedPage.waitForLoadState("domcontentloaded");
+
+  await expect.poll(() => openedPage.url()).toBe("https://example.com/react-compiler");
+  await expect(managerPage.getByText("Testing Docs")).toBeVisible();
+});

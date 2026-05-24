@@ -572,6 +572,8 @@ input[type="radio"] {
 
 .manager-tab-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 156px;
   border: 1px solid rgba(24, 33, 38, 0.1);
   border-radius: 18px;
@@ -604,12 +606,12 @@ input[type="radio"] {
 }
 
 .manager-tab-card__actions {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   display: flex;
+  margin-top: auto;
+  justify-content: flex-end;
   gap: 6px;
   opacity: 0;
+  padding: 0 16px 16px;
   pointer-events: none;
   transition: opacity 160ms ease;
 }
@@ -643,8 +645,8 @@ input[type="radio"] {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
   align-content: start;
+  flex: 1 1 auto;
   gap: 12px;
-  min-height: 100%;
   padding: 16px;
 }
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { CSSProperties, DragEvent, FocusEvent, PointerEvent } from "react";
+import type { CSSProperties, DragEvent, FocusEvent, KeyboardEvent, PointerEvent } from "react";
 import type { SavedTab } from "../../types/session";
 import type { EffectiveManagerGridDensity } from "./grid-density";
 import { getGridCardMinWidth } from "./grid-density";
@@ -8,6 +8,7 @@ interface ManagerTabGridProps {
   density: EffectiveManagerGridDensity;
   isAutoDowngraded: boolean;
   isInteractive: boolean;
+  showRestoreAction: boolean;
   sessionId: string;
   tabs: SavedTab[];
   busyKey: string | null;
@@ -55,6 +56,7 @@ export function ManagerTabGrid({
   density,
   isAutoDowngraded,
   isInteractive,
+  showRestoreAction,
   sessionId,
   tabs,
   busyKey,
@@ -101,6 +103,27 @@ export function ManagerTabGrid({
     setRevealedActionTabId(tabId);
   }
 
+  function handleCardDefaultAction(sessionId: string, tabId: string) {
+    if (!isInteractive || busyKey !== null) {
+      return;
+    }
+
+    void onOpenTab(sessionId, tabId);
+  }
+
+  function handleCardDefaultActionKeyDown(
+    event: KeyboardEvent<HTMLDivElement>,
+    sessionId: string,
+    tabId: string
+  ) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    handleCardDefaultAction(sessionId, tabId);
+  }
+
   return (
     <div
       className="manager-tab-grid"
@@ -119,50 +142,19 @@ export function ManagerTabGrid({
             onBlur={(event) => handleCardBlur(event, savedTab.id)}
             onFocus={() => setRevealedActionTabId(savedTab.id)}
             onPointerDown={(event) => handleCardPointerDown(event, savedTab.id)}
-            tabIndex={isInteractive ? 0 : -1}
           >
-            {isInteractive ? (
-              <div className="manager-tab-card__actions">
-                <button
-                  aria-label={`打开 “${savedTab.title}”`}
-                  className="manager-tab-card__icon-button"
-                  disabled={busyKey !== null}
-                  onClick={() => void onOpenTab(sessionId, savedTab.id)}
-                  title="打开"
-                  type="button"
-                >
-                  ↗
-                </button>
-                <button
-                  aria-label={`还原并移除 “${savedTab.title}”`}
-                  className="manager-tab-card__icon-button"
-                  disabled={busyKey !== null}
-                  onClick={() => void onRestoreTab(sessionId, savedTab.id)}
-                  title="还原并移除"
-                  type="button"
-                >
-                  ⤴
-                </button>
-                <button
-                  aria-label={`删除 “${savedTab.title}”`}
-                  className="manager-tab-card__icon-button"
-                  disabled={busyKey !== null}
-                  onClick={() => void onDeleteTab(sessionId, savedTab.id)}
-                  title="删除"
-                  type="button"
-                >
-                  ×
-                </button>
-              </div>
-            ) : null}
-
             <div
+              aria-label={isInteractive ? `打开 “${savedTab.title}”` : undefined}
               className="manager-tab-card__body"
               draggable={isInteractive}
+              onClick={() => handleCardDefaultAction(sessionId, savedTab.id)}
               onDragEnd={onClearDragState}
               onDragOver={(event) => onTabDragOver(event, sessionId, savedTab.id)}
               onDragStart={(event) => onTabDragStart(event, sessionId, savedTab.id)}
               onDrop={(event) => void onTabDrop(event, sessionId, savedTab.id)}
+              onKeyDown={(event) => handleCardDefaultActionKeyDown(event, sessionId, savedTab.id)}
+              role={isInteractive ? "button" : undefined}
+              tabIndex={isInteractive ? 0 : -1}
             >
               <div className="manager-tab-card__icon">
                 {savedTab.favIconUrl ? (
@@ -180,6 +172,43 @@ export function ManagerTabGrid({
                 ) : null}
               </div>
             </div>
+
+            {isInteractive ? (
+              <div className="manager-tab-card__actions">
+                <button
+                  aria-label={`打开 “${savedTab.title}”`}
+                  className="manager-tab-card__icon-button"
+                  disabled={busyKey !== null}
+                  onClick={() => void onOpenTab(sessionId, savedTab.id)}
+                  title="打开"
+                  type="button"
+                >
+                  ↗
+                </button>
+                {showRestoreAction ? (
+                  <button
+                    aria-label={`还原并移除 “${savedTab.title}”`}
+                    className="manager-tab-card__icon-button"
+                    disabled={busyKey !== null}
+                    onClick={() => void onRestoreTab(sessionId, savedTab.id)}
+                    title="还原并移除"
+                    type="button"
+                  >
+                    ⤴
+                  </button>
+                ) : null}
+                <button
+                  aria-label={`删除 “${savedTab.title}”`}
+                  className="manager-tab-card__icon-button"
+                  disabled={busyKey !== null}
+                  onClick={() => void onDeleteTab(sessionId, savedTab.id)}
+                  title="删除"
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+            ) : null}
           </article>
         );
       })}

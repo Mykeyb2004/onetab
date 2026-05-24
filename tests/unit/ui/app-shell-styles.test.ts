@@ -52,7 +52,10 @@ describe("shared app shell styles", () => {
     const css = readFileSync(resolve(process.cwd(), "src/ui/shared/app-shell.css"), "utf8");
 
     expect(css).toMatch(
-      /\.manager-tab-card__actions\s*\{[\s\S]*opacity:\s*0;[\s\S]*pointer-events:\s*none;[\s\S]*\}/
+      /\.manager-tab-card\s*\{[\s\S]*display:\s*flex;[\s\S]*flex-direction:\s*column;[\s\S]*\}/
+    );
+    expect(css).toMatch(
+      /\.manager-tab-card__actions\s*\{[\s\S]*margin-top:\s*auto;[\s\S]*justify-content:\s*flex-end;[\s\S]*opacity:\s*0;[\s\S]*pointer-events:\s*none;[\s\S]*\}/
     );
     expect(css).toMatch(
       /\.manager-tab-card:is\(:hover,\s*:focus-within,\s*\[data-actions-visible="true"\]\)\s*\.manager-tab-card__actions\s*\{[\s\S]*opacity:\s*1;[\s\S]*pointer-events:\s*auto;[\s\S]*\}/

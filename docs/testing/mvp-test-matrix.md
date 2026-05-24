@@ -45,6 +45,7 @@
 - `should match search query against group title`
 - `should match search query against tab title and url`
 - `should skip invalid lines during text import`
+- `should skip imported urls already saved in pinned groups`
 - `should import spd categories as session groups and skip unsupported links`
 - `should reject unsupported json schema version`
 - `should reorder tabs within the same session when dropped before another tab`
@@ -57,6 +58,7 @@
 - `should open restored group in a new window`
 - `should keep group after restore when keep-group is enabled`
 - `should export only the target group in single-group export`
+- `should skip json, text, and spd urls already saved in pinned groups`
 - `should import spd categories into persisted session groups`
 - `should merge settings patch without touching sessions`
 - `should persist a reordered tab within the same session`

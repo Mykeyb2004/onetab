@@ -27,6 +27,11 @@ interface ImportedSpdLink {
   url: string;
 }
 
+interface DuplicateFilterResult {
+  duplicateUrlCount: number;
+  sessions: SessionGroup[];
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -37,6 +42,122 @@ function normalizeIsoString(input: unknown, fallback: string): string {
   }
 
   return Number.isNaN(Date.parse(input)) ? fallback : input;
+}
+
+function normalizeComparableUrl(url: string): string {
+  return new URL(url).href;
+}
+
+function collectPinnedSessionUrls(sessionGroups: SessionGroup[]): Set<string> {
+  const pinnedSessionUrls = new Set<string>();
+
+  sessionGroups.forEach((sessionGroup) => {
+    if (sessionGroup.trashedAt || !sessionGroup.pinned) {
+      return;
+    }
+
+    sessionGroup.tabs.forEach((savedTab) => {
+      pinnedSessionUrls.add(normalizeComparableUrl(savedTab.url));
+    });
+  });
+
+  return pinnedSessionUrls;
+}
+
+function filterImportedSessionsAgainstPinnedUrls(
+  sessionGroups: SessionGroup[],
+  pinnedSessionUrls: Set<string>
+): DuplicateFilterResult {
+  let duplicateUrlCount = 0;
+
+  const sessions = sessionGroups.flatMap((sessionGroup) => {
+    const tabs = sessionGroup.tabs.filter((savedTab) => {
+      if (!pinnedSessionUrls.has(normalizeComparableUrl(savedTab.url))) {
+        return true;
+      }
+
+      duplicateUrlCount += 1;
+      return false;
+    });
+
+    if (tabs.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        ...sessionGroup,
+        tabCount: tabs.length,
+        tabs
+      }
+    ];
+  });
+
+  return {
+    duplicateUrlCount,
+    sessions
+  };
+}
+
+function buildImportMessage(
+  sourceLabel: "JSON" | "SPD" | "text",
+  importedGroupCount: number,
+  invalidSkippedCount: number,
+  duplicateUrlCount: number
+): string {
+  if (sourceLabel === "text") {
+    if (importedGroupCount === 0) {
+      if (invalidSkippedCount > 0 && duplicateUrlCount > 0) {
+        return `Skipped ${invalidSkippedCount} invalid line(s) and ${duplicateUrlCount} duplicate URL(s) already saved in pinned groups; no session group was imported.`;
+      }
+
+      if (duplicateUrlCount > 0) {
+        return `Skipped ${duplicateUrlCount} duplicate URL(s) already saved in pinned groups; no session group was imported.`;
+      }
+
+      return `Skipped ${invalidSkippedCount} invalid line(s); no session group was imported.`;
+    }
+
+    if (invalidSkippedCount > 0 && duplicateUrlCount > 0) {
+      return `Imported 1 session group and skipped ${invalidSkippedCount} invalid line(s) and ${duplicateUrlCount} duplicate URL(s) already saved in pinned groups.`;
+    }
+
+    if (duplicateUrlCount > 0) {
+      return `Imported 1 session group and skipped ${duplicateUrlCount} duplicate URL(s) already saved in pinned groups.`;
+    }
+
+    return invalidSkippedCount > 0
+      ? `Imported 1 session group and skipped ${invalidSkippedCount} invalid line(s).`
+      : "Imported 1 session group from the text file.";
+  }
+
+  const sourceSuffix = sourceLabel === "JSON" ? "from JSON" : "from SPD";
+
+  if (importedGroupCount === 0) {
+    if (invalidSkippedCount > 0 && duplicateUrlCount > 0) {
+      return `Skipped ${invalidSkippedCount} invalid item(s) and ${duplicateUrlCount} duplicate URL(s) already saved in pinned groups; no session group was imported ${sourceSuffix}.`;
+    }
+
+    if (duplicateUrlCount > 0) {
+      return `Skipped ${duplicateUrlCount} duplicate URL(s) already saved in pinned groups; no session group was imported ${sourceSuffix}.`;
+    }
+
+    return sourceLabel === "JSON"
+      ? "No valid sessions were imported from the JSON file."
+      : "No valid session groups were imported from the SPD file.";
+  }
+
+  if (invalidSkippedCount > 0 && duplicateUrlCount > 0) {
+    return `Imported ${importedGroupCount} session group(s) ${sourceSuffix} and skipped ${invalidSkippedCount} invalid item(s) and ${duplicateUrlCount} duplicate URL(s) already saved in pinned groups.`;
+  }
+
+  if (duplicateUrlCount > 0) {
+    return `Imported ${importedGroupCount} session group(s) ${sourceSuffix} and skipped ${duplicateUrlCount} duplicate URL(s) already saved in pinned groups.`;
+  }
+
+  return sourceLabel === "JSON"
+    ? `Imported ${importedGroupCount} session group(s) from JSON.`
+    : `Imported ${importedGroupCount} session group(s) from SPD.`;
 }
 
 function normalizeImportedSessions(
@@ -232,27 +353,37 @@ export async function importJsonContent(
 
   const now = dependencies.now?.() ?? new Date();
   const normalized = normalizeImportedSessions(parsedContent.sessions, now);
+  const state = await readRootState(dependencies.storage);
+  const filtered = filterImportedSessionsAgainstPinnedUrls(
+    normalized.sessions,
+    collectPinnedSessionUrls(state.sessions)
+  );
+  const skippedCount = normalized.skippedCount + filtered.duplicateUrlCount;
 
-  if (normalized.sessions.length === 0) {
+  if (filtered.sessions.length === 0) {
     return {
       ok: true,
-      message: "No valid sessions were imported from the JSON file.",
+      message: buildImportMessage("JSON", 0, normalized.skippedCount, filtered.duplicateUrlCount),
       importedGroupCount: 0,
-      skippedCount: normalized.skippedCount
+      skippedCount
     };
   }
 
-  const state = await readRootState(dependencies.storage);
   await writeRootState(dependencies.storage, {
     ...state,
-    sessions: [...normalized.sessions, ...state.sessions]
+    sessions: [...filtered.sessions, ...state.sessions]
   });
 
   return {
     ok: true,
-    message: `Imported ${normalized.sessions.length} session group(s) from JSON.`,
-    importedGroupCount: normalized.sessions.length,
-    skippedCount: normalized.skippedCount
+    message: buildImportMessage(
+      "JSON",
+      filtered.sessions.length,
+      normalized.skippedCount,
+      filtered.duplicateUrlCount
+    ),
+    importedGroupCount: filtered.sessions.length,
+    skippedCount
   };
 }
 
@@ -290,15 +421,36 @@ export async function importTextContent(
     };
   }
 
+  const state = await readRootState(dependencies.storage);
+  const pinnedSessionUrls = collectPinnedSessionUrls(state.sessions);
+  let duplicateUrlCount = 0;
+  const deduplicatedUrls = validUrls.filter((url) => {
+    if (!pinnedSessionUrls.has(normalizeComparableUrl(url))) {
+      return true;
+    }
+
+    duplicateUrlCount += 1;
+    return false;
+  });
+  const skippedCountTotal = skippedCount + duplicateUrlCount;
+
+  if (deduplicatedUrls.length === 0) {
+    return {
+      ok: true,
+      message: buildImportMessage("text", 0, skippedCount, duplicateUrlCount),
+      importedGroupCount: 0,
+      skippedCount: skippedCountTotal
+    };
+  }
+
   const sessionGroup = createSessionGroup(
-    validUrls.map((url, index) => ({
+    deduplicatedUrls.map((url, index) => ({
       title: url,
       url,
       index
     })),
     { now }
   );
-  const state = await readRootState(dependencies.storage);
 
   await writeRootState(dependencies.storage, {
     ...state,
@@ -307,12 +459,9 @@ export async function importTextContent(
 
   return {
     ok: true,
-    message:
-      skippedCount > 0
-        ? `Imported 1 session group and skipped ${skippedCount} invalid line(s).`
-        : "Imported 1 session group from the text file.",
+    message: buildImportMessage("text", 1, skippedCount, duplicateUrlCount),
     importedGroupCount: 1,
-    skippedCount
+    skippedCount: skippedCountTotal
   };
 }
 
@@ -337,26 +486,36 @@ export async function importSpdContent(
 
   const now = dependencies.now?.() ?? new Date();
   const normalized = normalizeImportedSpdSessions(parsedContent.categories, parsedContent.links, now);
+  const state = await readRootState(dependencies.storage);
+  const filtered = filterImportedSessionsAgainstPinnedUrls(
+    normalized.sessions,
+    collectPinnedSessionUrls(state.sessions)
+  );
+  const skippedCount = normalized.skippedCount + filtered.duplicateUrlCount;
 
-  if (normalized.sessions.length === 0) {
+  if (filtered.sessions.length === 0) {
     return {
       ok: true,
-      message: "No valid session groups were imported from the SPD file.",
+      message: buildImportMessage("SPD", 0, normalized.skippedCount, filtered.duplicateUrlCount),
       importedGroupCount: 0,
-      skippedCount: normalized.skippedCount
+      skippedCount
     };
   }
 
-  const state = await readRootState(dependencies.storage);
   await writeRootState(dependencies.storage, {
     ...state,
-    sessions: [...normalized.sessions, ...state.sessions]
+    sessions: [...filtered.sessions, ...state.sessions]
   });
 
   return {
     ok: true,
-    message: `Imported ${normalized.sessions.length} session group(s) from SPD.`,
-    importedGroupCount: normalized.sessions.length,
-    skippedCount: normalized.skippedCount
+    message: buildImportMessage(
+      "SPD",
+      filtered.sessions.length,
+      normalized.skippedCount,
+      filtered.duplicateUrlCount
+    ),
+    importedGroupCount: filtered.sessions.length,
+    skippedCount
   };
 }

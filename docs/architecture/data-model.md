@@ -157,6 +157,7 @@ interface ExportPayloadV1 {
 - 导出全部时带全部会话组
 - 导出单组时 `sessions` 长度为 1
 - MVP 允许携带 `settings`，但导入时可选择只导入会话组
+- JSON、纯文本、SPD 导入都会跳过已存在于固定且未删除分组中的重复 URL
 
 ### 5.2 纯文本导入格式
 
@@ -171,6 +172,7 @@ https://example.com/b
 
 - 空行忽略
 - 非法 URL 跳过继续
+- 已存在于固定且未删除分组中的 URL 跳过继续
 - 最终生成一个新会话组
 
 ### 5.3 SPD 导入格式
@@ -205,6 +207,7 @@ interface SpdImportPayload {
 - `favicon` 写入 `favIconUrl`；空字符串视为 `null`
 - 没有可导入链接的分类不会生成空分组
 - 无法匹配分类的链接或不受支持的 URL 会跳过并计入 `skippedCount`
+- 已存在于固定且未删除分组中的 URL 会在分组内被跳过；若整组剩余 URL 数为 0，则该组不导入
 
 ## 6. 搜索视图模型
 

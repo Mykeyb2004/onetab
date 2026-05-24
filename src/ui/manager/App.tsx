@@ -1365,6 +1365,7 @@ export function ManagerApp() {
                 onTabDragStart={handleTabDragStart}
                 onTabDrop={handleTabDrop}
                 sessionId={selectedSession.id}
+                showRestoreAction={!selectedSession.pinned}
                 tabs={selectedSession.tabs}
               />
             </div>
