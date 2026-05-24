@@ -228,8 +228,8 @@ test("manager exposes icon actions on focused cards without triggering drag", as
   const managerPage = await context.newPage();
   await seedManagerState(extensionId, managerPage);
 
-  const firstCard = managerPage.locator(".manager-tab-card").first();
-  await firstCard.focus();
+  const firstCardBody = managerPage.locator(".manager-tab-card__body").first();
+  await firstCardBody.focus();
 
   await expect(
     managerPage.getByRole("button", { name: "还原并移除 “React Compiler Tab 1”" })
@@ -253,8 +253,8 @@ test("manager hides the restore action for pinned groups", async ({
     }
   ]);
 
-  const firstCard = managerPage.locator(".manager-tab-card").first();
-  await firstCard.focus();
+  const firstCardBody = managerPage.locator(".manager-tab-card__body").first();
+  await firstCardBody.focus();
 
   await expect(managerPage.getByRole("button", { name: "打开 “Pinned Research Tab 1”" })).toBeVisible();
   await expect(managerPage.getByRole("button", { name: "删除 “Pinned Research Tab 1”" })).toBeVisible();
