@@ -1,6 +1,6 @@
 # ADR-005 Manager Grid Density Preference
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-05-24
 
 ## Context
