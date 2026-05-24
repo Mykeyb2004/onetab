@@ -24,6 +24,6 @@ test("loads popup, manager, and newtab pages for the unpacked extension", async 
   const newTabPage = await context.newPage();
   await newTabPage.goto("chrome://newtab/");
 
-  await expect(newTabPage.getByRole("heading", { name: "New Tab" })).toBeVisible();
-  await expect(newTabPage.getByRole("button", { name: "Open Manager" })).toBeVisible();
+  await expect(newTabPage.getByRole("heading", { name: "TabVault Manager" })).toBeVisible();
+  await expect(newTabPage.getByPlaceholder("搜索分组、标题或 URL")).toBeVisible();
 });

@@ -12,7 +12,7 @@
     "type": "module"
   },
   "chrome_url_overrides": {
-    "newtab": "newtab.html"
+    "newtab": "manager.html"
   },
   "options_page": "options.html",
   "permissions": ["tabs", "storage", "contextMenus", "notifications"],

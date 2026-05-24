@@ -47,7 +47,7 @@
 
 用途：
 
-- 将 TabVault 的 `newtab.html` 作为浏览器默认新标签页入口壳
+- 将 `manager.html` 作为浏览器默认新标签页入口
 
 限制：
 

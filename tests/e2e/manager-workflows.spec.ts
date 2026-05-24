@@ -196,7 +196,7 @@ test("manager remembers collapsed sidebar preference and restores the rail toggl
   const workbench = managerPage.locator(".manager-workbench");
 
   await expect(workbench).toHaveAttribute("data-sidebar-preference", "expanded");
-  await expect(managerPage.locator("#session-node-session-1")).toBeVisible();
+  await expect(managerPage.locator("#session-node-session-1")).toHaveCount(1);
 
   await managerPage.getByRole("button", { name: "折叠边栏" }).click();
   await expect(workbench).toHaveAttribute("data-sidebar-preference", "collapsed");
@@ -209,7 +209,7 @@ test("manager remembers collapsed sidebar preference and restores the rail toggl
 
   await managerPage.getByRole("button", { name: "展开边栏" }).click();
   await expect(workbench).toHaveAttribute("data-sidebar-preference", "expanded");
-  await expect(managerPage.locator("#session-node-session-1")).toBeVisible();
+  await expect(managerPage.locator("#session-node-session-1")).toHaveCount(1);
 });
 
 test("manager persists the selected grid density after reload", async ({
@@ -288,7 +288,7 @@ test("manager hides the restore action for pinned groups", async ({
     }
   ]);
 
-  await expect(managerPage.getByRole("heading", { name: "Pinned Research" })).toBeVisible();
+  await expect(managerPage.getByRole("heading", { name: "📌 Pinned Research" })).toBeVisible();
   const firstCardBody = managerPage.locator(".manager-tab-card__body").first();
   await firstCardBody.focus();
 

@@ -14,7 +14,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: resolve(rootDir, "popup.html"),
-        newtab: resolve(rootDir, "newtab.html"),
         manager: resolve(rootDir, "manager.html"),
         options: resolve(rootDir, "options.html"),
         help: resolve(rootDir, "help.html"),

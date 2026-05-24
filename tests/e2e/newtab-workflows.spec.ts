@@ -41,7 +41,8 @@ async function seedNewTabState(page: import("@playwright/test").Page, sessions: 
             defaultClickAction: "capture-current-window",
             showCaptureFeedback: true,
             enableContextMenu: true,
-            managerGridDensityPreference: "enhanced"
+            managerGridDensityPreference: "enhanced",
+            managerSidebarPreference: "expanded"
           },
           sessions: nextSessions
         }
@@ -52,34 +53,20 @@ async function seedNewTabState(page: import("@playwright/test").Page, sessions: 
   await page.reload();
 }
 
-test("new tab shows an empty state before sessions exist", async ({ context }) => {
+test("new tab opens the full manager interface when no sessions exist", async ({ context }) => {
   const page = await context.newPage();
   await page.goto("chrome://newtab/");
 
-  await expect(page.locator(".card strong", { hasText: "No saved sessions yet." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open Manager" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "TabVault Manager" })).toBeVisible();
+  await expect(page.getByPlaceholder("搜索分组、标题或 URL")).toBeVisible();
+  await expect(page.locator(".manager-empty-state")).toBeVisible();
 });
 
-test("new tab can restore the latest session without opening manager", async ({ context }) => {
+test("new tab loads seeded sessions in the full manager interface", async ({ context }) => {
   const page = await context.newPage();
   await seedNewTabState(page, [createSeededSession("session-1", "Research Bundle", 2)]);
 
-  await page.getByRole("button", { name: "Restore Latest Group" }).click();
-
-  await expect(page.getByText("Restored 2 tab(s) in a new window.")).toBeVisible();
-  await expect(page.getByText("Research Bundle")).not.toBeVisible();
-});
-
-test("new tab session cards open manager focused on the selected session", async ({ context }) => {
-  const page = await context.newPage();
-  await seedNewTabState(page, [
-    createSeededSession("session-1", "Alpha Bundle", 2),
-    createSeededSession("session-2", "Beta Bundle", 3)
-  ]);
-
-  await page.getByRole("button", { name: "Manage Beta Bundle" }).click();
-
-  await expect(page).toHaveURL(/manager\.html\?session=session-2$/);
-  await expect(page.getByText("Beta Bundle Tab 1")).toBeVisible();
-  await expect(page.getByText("Alpha Bundle Tab 1")).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "TabVault Manager" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Research Bundle" })).toBeVisible();
+  await expect(page.locator(".manager-density-toggle")).toBeVisible();
 });
