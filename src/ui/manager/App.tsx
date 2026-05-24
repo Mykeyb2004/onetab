@@ -1008,6 +1008,7 @@ export function ManagerApp() {
               aria-expanded={sidebarPreference === "expanded"}
               aria-label={sidebarPreference === "expanded" ? "折叠边栏" : "展开边栏"}
               className="button button--quiet manager-sidebar__rail-toggle"
+              title={sidebarPreference === "expanded" ? "折叠边栏" : "展开边栏"}
               onClick={() =>
                 void handleSidebarPreferenceChange(
                   sidebarPreference === "expanded" ? "collapsed" : "expanded"
@@ -1015,7 +1016,9 @@ export function ManagerApp() {
               }
               type="button"
             >
-              {sidebarPreference === "expanded" ? "折叠边栏" : "展开边栏"}
+              <span aria-hidden="true" className="manager-sidebar__rail-toggle-icon">
+                {sidebarPreference === "expanded" ? "‹" : "›"}
+              </span>
             </button>
           </div>
 

@@ -40,16 +40,24 @@ describe("shared app shell styles", () => {
     );
   });
 
-  it("should let the manager workbench collapse the sidebar into a saved rail", () => {
+  it("should render the manager sidebar rail toggle as an icon-only control", () => {
     const css = readFileSync(resolve(process.cwd(), "src/ui/shared/app-shell.css"), "utf8");
     const managerApp = readFileSync(resolve(process.cwd(), "src/ui/manager/App.tsx"), "utf8");
 
     expect(managerApp).toContain('data-sidebar-preference={sidebarPreference}');
+    expect(managerApp).toContain('title={sidebarPreference === "expanded" ? "折叠边栏" : "展开边栏"}');
+    expect(managerApp).toContain('className="manager-sidebar__rail-toggle-icon"');
+    expect(managerApp).toMatch(
+      /className="button button--quiet manager-sidebar__rail-toggle"[\s\S]*className="manager-sidebar__rail-toggle-icon"/
+    );
     expect(css).toMatch(
       /\.manager-workbench\[data-sidebar-preference="collapsed"\]\s*\{[\s\S]*grid-template-columns:\s*84px minmax\(0,\s*1fr\);[\s\S]*\}/
     );
     expect(css).toMatch(
-      /\.manager-sidebar__rail-toggle\s*\{[\s\S]*white-space:\s*normal;[\s\S]*text-align:\s*center;[\s\S]*\}/
+      /\.manager-sidebar__rail-toggle\s*\{[\s\S]*width:\s*32px;[\s\S]*padding:\s*0;[\s\S]*\}/
+    );
+    expect(css).toMatch(
+      /\.manager-sidebar__rail-toggle-icon\s*\{[\s\S]*font-size:\s*18px;[\s\S]*line-height:\s*1;[\s\S]*\}/
     );
   });
 
