@@ -173,6 +173,39 @@ https://example.com/b
 - 非法 URL 跳过继续
 - 最终生成一个新会话组
 
+### 5.3 SPD 导入格式
+
+支持导入包含 `categories` 与 `links` 的 SPD JSON 导出：
+
+```ts
+interface SpdImportPayload {
+  categories: Array<{
+    id: number | string;
+    name?: string;
+    icon?: string;
+  }>;
+  links: Array<{
+    id?: number | string;
+    category: number | string;
+    title?: string;
+    url: string;
+    favicon?: string;
+  }>;
+  opts?: Record<string, unknown>;
+  lStorage?: Record<string, unknown>;
+}
+```
+
+规则：
+
+- `categories` 中的每个分类映射为一个新的 `SessionGroup`
+- `links` 按 `category` 归入对应分组，并保持原始出现顺序
+- 仅导入 `http`、`https`、`file` URL
+- 缺失标题时回退为 URL
+- `favicon` 写入 `favIconUrl`；空字符串视为 `null`
+- 没有可导入链接的分类不会生成空分组
+- 无法匹配分类的链接或不受支持的 URL 会跳过并计入 `skippedCount`
+
 ## 6. 搜索视图模型
 
 MVP 搜索结果不单独落盘，使用运行时派生结构：

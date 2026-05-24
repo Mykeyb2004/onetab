@@ -11,6 +11,7 @@ import {
 } from "../../features/sessions/export-sessions";
 import {
   importJsonContent,
+  importSpdContent,
   importTextContent
 } from "../../features/sessions/import-sessions";
 import { listSessionGroups } from "../../features/sessions/list-session-groups";
@@ -832,9 +833,12 @@ export function ManagerApp() {
 
     try {
       const content = await readFileAsText(file);
-      const result = file.name.toLowerCase().endsWith(".json")
-        ? await importJsonContent(content)
-        : await importTextContent(content);
+      const lowerCaseFileName = file.name.toLowerCase();
+      const result = lowerCaseFileName.endsWith(".spd")
+        ? await importSpdContent(content)
+        : lowerCaseFileName.endsWith(".json")
+          ? await importJsonContent(content)
+          : await importTextContent(content);
 
       setStatus(result.message);
       await loadSessionCollections("active", null);
@@ -945,7 +949,7 @@ export function ManagerApp() {
             </button>
           </div>
           <input
-            accept=".json,.txt,.text"
+            accept=".json,.spd,.txt,.text"
             className="visually-hidden"
             onChange={handleImportFile}
             ref={importInputRef}

@@ -5,6 +5,7 @@ import {
 } from "../../../src/features/sessions/export-sessions";
 import {
   importJsonContent,
+  importSpdContent,
   importTextContent
 } from "../../../src/features/sessions/import-sessions";
 import {
@@ -119,5 +120,82 @@ describe("import/export features", () => {
     expect(result.importedGroupCount).toBe(1);
     expect(importedState.sessions).toHaveLength(1);
     expect(importedState.sessions[0].tabs[0].url).toBe("https://example.com/one");
+  });
+
+  it("should import spd categories as session groups and skip unsupported links", async () => {
+    const storage = createMemoryStorage();
+    const payload = JSON.stringify({
+      categories: [
+        { id: 1, icon: "home", name: "Main" },
+        { id: 2, icon: "rocket", name: "AI" },
+        { id: 3, icon: "box", name: "Empty" }
+      ],
+      links: [
+        {
+          id: 101,
+          category: 1,
+          favicon: "data:image/png;base64,abc",
+          title: "OpenAI",
+          url: "https://openai.com/"
+        },
+        {
+          id: 102,
+          category: 1,
+          favicon: "",
+          title: "   ",
+          url: "https://example.com/docs"
+        },
+        {
+          id: 103,
+          category: 2,
+          favicon: "",
+          title: "Local file",
+          url: "file:///tmp/demo.txt"
+        },
+        {
+          id: 104,
+          category: 2,
+          favicon: "",
+          title: "Unsupported",
+          url: "chrome://extensions"
+        },
+        {
+          id: 105,
+          category: 99,
+          favicon: "",
+          title: "Orphan",
+          url: "https://orphan.example.com/"
+        }
+      ],
+      opts: {},
+      lStorage: {}
+    });
+
+    const result = await importSpdContent(payload, {
+      storage,
+      now: () => new Date("2026-05-24T05:00:00.000Z")
+    });
+    const state = await readRootState(storage);
+
+    expect(result.importedGroupCount).toBe(2);
+    expect(result.skippedCount).toBe(3);
+    expect(state.sessions).toHaveLength(2);
+    expect(state.sessions.map((session) => session.title)).toEqual(["Main", "AI"]);
+    expect(state.sessions[0].tabs).toHaveLength(2);
+    expect(state.sessions[0].tabs[0]).toMatchObject({
+      title: "OpenAI",
+      url: "https://openai.com/",
+      favIconUrl: "data:image/png;base64,abc"
+    });
+    expect(state.sessions[0].tabs[1]).toMatchObject({
+      title: "https://example.com/docs",
+      url: "https://example.com/docs",
+      favIconUrl: null
+    });
+    expect(state.sessions[1].tabs).toHaveLength(1);
+    expect(state.sessions[1].tabs[0]).toMatchObject({
+      title: "Local file",
+      url: "file:///tmp/demo.txt"
+    });
   });
 });

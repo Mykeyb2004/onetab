@@ -26,6 +26,7 @@
 | 组重命名 / 固定 / 删除 | Yes | Yes | Yes |
 | 搜索组名 / 标题 / URL | Yes | Yes | Yes |
 | JSON 导入导出 | Yes | Yes | Yes |
+| SPD 导入 | Yes | Yes | Optional |
 | Text 导入 | Yes | Yes | Yes |
 | 设置读写 | Yes | Yes | Optional |
 | 拖拽调整组和标签顺序 | Yes | Yes | Optional |
@@ -44,6 +45,7 @@
 - `should match search query against group title`
 - `should match search query against tab title and url`
 - `should skip invalid lines during text import`
+- `should import spd categories as session groups and skip unsupported links`
 - `should reject unsupported json schema version`
 - `should reorder tabs within the same session when dropped before another tab`
 - `should move tabs between active sessions before a target tab`
@@ -55,6 +57,7 @@
 - `should open restored group in a new window`
 - `should keep group after restore when keep-group is enabled`
 - `should export only the target group in single-group export`
+- `should import spd categories into persisted session groups`
 - `should merge settings patch without touching sessions`
 - `should persist a reordered tab within the same session`
 - `should persist a moved tab before a target tab in another session`
