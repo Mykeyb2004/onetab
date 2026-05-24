@@ -127,6 +127,7 @@ interface ExtensionSettings {
   defaultClickAction: "capture-current-window" | "open-manager";
   showCaptureFeedback: boolean;
   enableContextMenu: boolean;
+  managerGridDensityPreference: "compact" | "enhanced";
 }
 ```
 
@@ -136,6 +137,7 @@ interface ExtensionSettings {
 - `defaultClickAction`: `capture-current-window`
 - `showCaptureFeedback`: `true`
 - `enableContextMenu`: `true`
+- `managerGridDensityPreference`: `enhanced`
 
 ## 5. 导入导出模型
 

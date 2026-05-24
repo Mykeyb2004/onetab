@@ -12,14 +12,18 @@ export interface SettingsPageState {
   persistence: PersistenceDirectoryState;
 }
 
+export async function loadExtensionSettings(): Promise<ExtensionSettings> {
+  const state = await readRootState(chromeLocalStorage);
+  return state.settings;
+}
+
 export async function loadSettingsPageState(): Promise<SettingsPageState> {
   const persistence = await loadPersistenceDirectoryState();
   let settings: ExtensionSettings | null = null;
   let settingsError: string | null = null;
 
   try {
-    const state = await readRootState(chromeLocalStorage);
-    settings = state.settings;
+    settings = await loadExtensionSettings();
   } catch (error: unknown) {
     settingsError =
       error instanceof Error ? error.message : "Failed to load settings from the active data store.";

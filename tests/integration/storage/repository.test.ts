@@ -34,6 +34,7 @@ describe("local repository", () => {
     expect(state.schemaVersion).toBe(1);
     expect(state.sessions).toEqual([]);
     expect(state.settings.restoreBehavior).toBe("remove-group");
+    expect(state.settings.managerGridDensityPreference).toBe("enhanced");
   });
 
   it("should append session groups and persist settings changes", async () => {
@@ -48,7 +49,8 @@ describe("local repository", () => {
     await appendSessionGroup(storage, group);
     await updateSettings(storage, {
       defaultClickAction: "open-manager",
-      enableContextMenu: false
+      enableContextMenu: false,
+      managerGridDensityPreference: "compact"
     });
 
     const state = await readRootState(storage);
@@ -57,6 +59,7 @@ describe("local repository", () => {
     expect(state.sessions[0].title).toBe("保存于 2026-04-19");
     expect(state.settings.defaultClickAction).toBe("open-manager");
     expect(state.settings.enableContextMenu).toBe(false);
+    expect(state.settings.managerGridDensityPreference).toBe("compact");
   });
 
   it("should migrate legacy saved sessions without clearing user data", async () => {
@@ -103,5 +106,6 @@ describe("local repository", () => {
     });
     expect(state.settings.restoreBehavior).toBe("keep-group");
     expect(state.settings.enableContextMenu).toBe(true);
+    expect(state.settings.managerGridDensityPreference).toBe("enhanced");
   });
 });

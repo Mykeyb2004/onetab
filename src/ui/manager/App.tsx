@@ -23,11 +23,16 @@ import { restoreSessionGroup } from "../../features/sessions/restore/restore-ses
 import { restoreSessionGroupFromTrash } from "../../features/sessions/restore-session-group-from-trash";
 import { searchSessions } from "../../features/sessions/search-sessions";
 import { togglePinSessionGroup } from "../../features/sessions/toggle-pin-session-group";
+import { loadExtensionSettings } from "../../features/settings/load-settings";
+import { saveSettings } from "../../features/settings/save-settings";
 import { isSessionGroupTrashed } from "../../domain/sessions/session-groups";
 import { ROOT_STATE_STORAGE_CONFIG_KEY } from "../../storage/root-state/config";
 import type { SearchHit } from "../../types/search";
+import type { ManagerGridDensityPreference } from "../../types/settings";
 import type { SessionGroup } from "../../types/session";
 import { AppShell } from "../shared/AppShell";
+import { ManagerTabGrid } from "./ManagerTabGrid";
+import { resolveManagerGridDensity } from "./grid-density";
 
 type SessionBucket = "active" | "trash";
 const SESSION_DRAG_TYPE = "application/x-tabvault-session";
@@ -150,6 +155,9 @@ export function ManagerApp() {
   const [status, setStatus] = useState("正在加载 TabVault 分组...");
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [densityPreference, setDensityPreference] =
+    useState<ManagerGridDensityPreference>("enhanced");
+  const [managerMainWidth, setManagerMainWidth] = useState(0);
   const [showImportExportTools, setShowImportExportTools] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
   const [isActiveExpanded, setIsActiveExpanded] = useState(true);
@@ -164,6 +172,7 @@ export function ManagerApp() {
   const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
   const [isTabDropAtEnd, setIsTabDropAtEnd] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const managerMainRef = useRef<HTMLElement | null>(null);
 
   const allSessions = useMemo(
     () => [...sessionCollections.activeSessions, ...sessionCollections.trashedSessions],
@@ -173,6 +182,14 @@ export function ManagerApp() {
   const searchHits: SearchHit[] = useMemo(
     () => searchSessions(query, allSessions),
     [query, allSessions]
+  );
+  const densityState = useMemo(
+    () =>
+      resolveManagerGridDensity({
+        preference: densityPreference,
+        containerWidth: managerMainWidth
+      }),
+    [densityPreference, managerMainWidth]
   );
 
   const selectedSessions =
@@ -211,8 +228,8 @@ export function ManagerApp() {
   useEffect(() => {
     let alive = true;
 
-    listSessionGroups()
-      .then((collections) => {
+    Promise.all([listSessionGroups(), loadExtensionSettings()])
+      .then(([collections, settings]) => {
         if (!alive) {
           return;
         }
@@ -222,6 +239,7 @@ export function ManagerApp() {
         setSessionCollections(collections);
         setSelectedBucket(nextSelection.bucket);
         setSelectedSessionId(nextSelection.sessionId);
+        setDensityPreference(settings.managerGridDensityPreference);
         setStatus(
           `已加载 ${collections.activeSessions.length} 个分组，回收站中有 ${collections.trashedSessions.length} 个分组。`
         );
@@ -254,7 +272,9 @@ export function ManagerApp() {
       }
 
       void loadSessionCollections(selectedBucket, selectedSessionId)
-        .then(() => {
+        .then(async () => {
+          const settings = await loadExtensionSettings();
+          setDensityPreference(settings.managerGridDensityPreference);
           setStatus("Session Manager 已同步最新分组内容。");
         })
         .catch((nextError: unknown) => {
@@ -272,6 +292,34 @@ export function ManagerApp() {
       chrome.storage.onChanged.removeListener(handleStorageChange);
     };
   }, [loadSessionCollections, selectedBucket, selectedSessionId]);
+
+  useEffect(() => {
+    const element = managerMainRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    if (typeof ResizeObserver === "undefined") {
+      setManagerMainWidth(element.getBoundingClientRect().width);
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+
+      if (!entry) {
+        return;
+      }
+
+      setManagerMainWidth(entry.contentRect.width);
+    });
+
+    observer.observe(element);
+    setManagerMainWidth(element.getBoundingClientRect().width);
+
+    return () => observer.disconnect();
+  }, []);
 
   function closeSessionMenus() {
     setHoveredActiveSessionMenuId(null);
@@ -394,6 +442,23 @@ export function ManagerApp() {
       setStatus(nextError instanceof Error ? nextError.message : "打开标签页失败。");
     } finally {
       setBusyKey(null);
+    }
+  }
+
+  async function handleDensityPreferenceChange(nextPreference: ManagerGridDensityPreference) {
+    if (nextPreference === densityPreference) {
+      return;
+    }
+
+    const previousPreference = densityPreference;
+    setDensityPreference(nextPreference);
+
+    try {
+      await saveSettings({ managerGridDensityPreference: nextPreference });
+      setStatus(`已切换到${nextPreference === "compact" ? "简洁" : "增强"}卡片密度。`);
+    } catch (nextError: unknown) {
+      setDensityPreference(previousPreference);
+      setStatus(nextError instanceof Error ? nextError.message : "保存卡片密度偏好失败。");
     }
   }
 
@@ -1080,7 +1145,7 @@ export function ManagerApp() {
           </div>
         </aside>
 
-        <section className="manager-main">
+        <section className="manager-main" ref={managerMainRef}>
           {query.trim() ? (
             <div className="card stack">
               <strong>搜索结果</strong>
@@ -1162,6 +1227,24 @@ export function ManagerApp() {
                 </div>
 
                 <div className="inline-actions">
+                  {selectedBucket === "active" ? (
+                    <div aria-label="标签信息密度" className="manager-density-toggle" role="group">
+                      <button
+                        className={`button button--quiet button--small ${densityPreference === "compact" ? "button--active" : ""}`}
+                        onClick={() => void handleDensityPreferenceChange("compact")}
+                        type="button"
+                      >
+                        简洁
+                      </button>
+                      <button
+                        className={`button button--quiet button--small ${densityPreference === "enhanced" ? "button--active" : ""}`}
+                        onClick={() => void handleDensityPreferenceChange("enhanced")}
+                        type="button"
+                      >
+                        增强
+                      </button>
+                    </div>
+                  ) : null}
                   {selectedBucket === "trash" ? (
                     <>
                       <button
@@ -1259,85 +1342,28 @@ export function ManagerApp() {
               {selectedBucket === "active" ? (
                 <p className="muted manager-tabs__hint">
                   拖拽标签可调整组内顺序，拖到左侧分组可跨组移动。
+                  {densityState.isAutoDowngraded ? " 当前宽度不足，已临时切换为简洁密度。" : ""}
                 </p>
               ) : null}
 
-              <div className="manager-tabs">
-                {selectedSession.tabs.map((savedTab) => (
-                  <div
-                    className={`manager-tab ${selectedBucket === "active" ? "manager-tab--draggable" : ""} ${draggedTabId === savedTab.id ? "manager-tab--dragging" : ""} ${dragOverTabId === savedTab.id ? "manager-tab--drop-target" : ""}`}
-                    draggable={selectedBucket === "active"}
-                    key={savedTab.id}
-                    onDragEnd={clearDragState}
-                    onDragOver={(event) => handleTabDragOver(event, selectedSession.id, savedTab.id)}
-                    onDragStart={(event) => handleTabDragStart(event, selectedSession.id, savedTab.id)}
-                    onDrop={(event) => void handleTabDrop(event, selectedSession.id, savedTab.id)}
-                  >
-                    <div className="manager-tab__icon">
-                      {savedTab.favIconUrl ? (
-                        <img alt="" src={savedTab.favIconUrl} />
-                      ) : (
-                        <span>{savedTab.title.slice(0, 1).toUpperCase()}</span>
-                      )}
-                    </div>
-
-                    <div className="manager-tab__copy">
-                      <button
-                        className="manager-tab__title"
-                        disabled={busyKey !== null || selectedBucket === "trash"}
-                        onClick={() => void handleOpenTab(selectedSession.id, savedTab.id)}
-                        type="button"
-                      >
-                        {savedTab.title}
-                      </button>
-                      <span className="manager-tab__url muted">{savedTab.url}</span>
-                    </div>
-
-                    <div className="manager-tab__actions">
-                      {selectedBucket === "trash" ? (
-                        <span className="muted">回收站中的标签页仅随分组一起恢复</span>
-                      ) : (
-                        <>
-                          <button
-                            className="button button--secondary button--small"
-                            disabled={busyKey !== null}
-                            onClick={() => void handleOpenTab(selectedSession.id, savedTab.id)}
-                            type="button"
-                          >
-                            {busyKey === `open:${savedTab.id}` ? "打开中..." : "打开"}
-                          </button>
-                          <button
-                            className="button button--quiet button--small"
-                            disabled={busyKey !== null}
-                            onClick={() => void handleRestoreTab(selectedSession.id, savedTab.id)}
-                            type="button"
-                          >
-                            {busyKey === `tab:${savedTab.id}` ? "还原中..." : "还原并移除"}
-                          </button>
-                          <button
-                            className="button button--quiet button--small"
-                            disabled={busyKey !== null}
-                            onClick={() => void handleDeleteTab(selectedSession.id, savedTab.id)}
-                            type="button"
-                          >
-                            {busyKey === `delete-tab:${savedTab.id}` ? "删除中..." : "删除"}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {selectedBucket === "active" ? (
-                  <div
-                    aria-label="拖拽记录到当前分组末尾"
-                    className={`manager-tabs__dropzone ${isTabDropAtEnd ? "manager-tabs__dropzone--active" : ""}`}
-                    onDragOver={(event) => handleTabDragOver(event, selectedSession.id, null)}
-                    onDrop={(event) => void handleTabDrop(event, selectedSession.id, null)}
-                  >
-                    {selectedSession.tabs.length === 0 ? "拖入记录到此分组" : "拖到这里放到末尾"}
-                  </div>
-                ) : null}
-              </div>
+              <ManagerTabGrid
+                busyKey={busyKey}
+                density={densityState.effectiveDensity}
+                dragOverTabId={dragOverTabId}
+                draggedTabId={draggedTabId}
+                isAutoDowngraded={densityState.isAutoDowngraded}
+                isInteractive={selectedBucket === "active"}
+                isTabDropAtEnd={isTabDropAtEnd}
+                onClearDragState={clearDragState}
+                onDeleteTab={handleDeleteTab}
+                onOpenTab={handleOpenTab}
+                onRestoreTab={handleRestoreTab}
+                onTabDragOver={handleTabDragOver}
+                onTabDragStart={handleTabDragStart}
+                onTabDrop={handleTabDrop}
+                sessionId={selectedSession.id}
+                tabs={selectedSession.tabs}
+              />
             </div>
           ) : (
             <div className="card manager-empty-state">

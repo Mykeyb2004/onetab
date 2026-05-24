@@ -81,7 +81,8 @@ async function seedManagerState(
             restoreBehavior: "remove-group",
             defaultClickAction: "capture-current-window",
             showCaptureFeedback: true,
-            enableContextMenu: true
+            enableContextMenu: true,
+            managerGridDensityPreference: "enhanced"
           },
           sessions: nextSessions
         }
@@ -91,6 +92,13 @@ async function seedManagerState(
   );
 
   await managerPage.reload();
+}
+
+async function expectGridDensity(
+  page: import("@playwright/test").Page,
+  density: "compact" | "enhanced"
+) {
+  await expect(page.locator(".manager-tab-grid")).toHaveAttribute("data-density", density);
 }
 
 test("manager can search, rename, pin, and delete seeded sessions", async ({
@@ -167,4 +175,68 @@ test("manager keeps the sidebar visible while the tab list scrolls", async ({
   expect(afterSidebarBox).not.toBeNull();
   expect(Math.abs((afterSidebarBox?.y ?? 0) - (beforeSidebarBox?.y ?? 0))).toBeLessThan(4);
   await expect(targetSession).toBeVisible();
+});
+
+test("manager persists the selected grid density after reload", async ({
+  context,
+  extensionId
+}) => {
+  const managerPage = await context.newPage();
+  await seedManagerState(extensionId, managerPage, [
+    createSeededSession("session-1", "Long Session", 6)
+  ]);
+
+  await managerPage.getByRole("button", { name: "简洁" }).click();
+  await expectGridDensity(managerPage, "compact");
+
+  await managerPage.reload();
+  await expectGridDensity(managerPage, "compact");
+});
+
+test("manager auto-downgrades enhanced density when the pane gets too narrow", async ({
+  context,
+  extensionId
+}) => {
+  const managerPage = await context.newPage();
+  await managerPage.setViewportSize({ width: 1440, height: 900 });
+  await seedManagerState(extensionId, managerPage, [
+    createSeededSession("session-1", "Long Session", 8)
+  ]);
+
+  await managerPage.getByRole("button", { name: "增强" }).click();
+  await expectGridDensity(managerPage, "enhanced");
+
+  await managerPage.setViewportSize({ width: 820, height: 900 });
+  await expect(managerPage.locator(".manager-tab-grid")).toHaveAttribute(
+    "data-auto-downgraded",
+    "true"
+  );
+  await expectGridDensity(managerPage, "compact");
+
+  await managerPage.setViewportSize({ width: 1440, height: 900 });
+  await expect(managerPage.locator(".manager-tab-grid")).toHaveAttribute(
+    "data-auto-downgraded",
+    "false"
+  );
+  await expectGridDensity(managerPage, "enhanced");
+});
+
+test("manager exposes icon actions on focused cards without triggering drag", async ({
+  context,
+  extensionId
+}) => {
+  const managerPage = await context.newPage();
+  await seedManagerState(extensionId, managerPage);
+
+  const firstCard = managerPage.locator(".manager-tab-card").first();
+  await firstCard.focus();
+
+  await expect(
+    managerPage.getByRole("button", { name: "还原并移除 “React Compiler Tab 1”" })
+  ).toBeVisible();
+  await managerPage
+    .getByRole("button", { name: "还原并移除 “React Compiler Tab 1”" })
+    .click();
+
+  await expect(managerPage.getByText(/Restored 1 tab/)).toBeVisible();
 });

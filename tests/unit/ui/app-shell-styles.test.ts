@@ -39,4 +39,23 @@ describe("shared app shell styles", () => {
       /\.manager-tree__node\s*\{[\s\S]*min-height:\s*32px;[\s\S]*border-radius:\s*8px;[\s\S]*background:\s*transparent;[\s\S]*\}/
     );
   });
+
+  it("should render manager tabs as a responsive auto-fill grid", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/ui/shared/app-shell.css"), "utf8");
+
+    expect(css).toMatch(
+      /\.manager-tab-grid\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(var\(--manager-grid-min-card-width\),\s*1fr\)\);[\s\S]*\}/
+    );
+  });
+
+  it("should keep card actions visually hidden until hover, focus, or explicit reveal", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/ui/shared/app-shell.css"), "utf8");
+
+    expect(css).toMatch(
+      /\.manager-tab-card__actions\s*\{[\s\S]*opacity:\s*0;[\s\S]*pointer-events:\s*none;[\s\S]*\}/
+    );
+    expect(css).toMatch(
+      /\.manager-tab-card:is\(:hover,\s*:focus-within,\s*\[data-actions-visible="true"\]\)\s*\.manager-tab-card__actions\s*\{[\s\S]*opacity:\s*1;[\s\S]*pointer-events:\s*auto;[\s\S]*\}/
+    );
+  });
 });

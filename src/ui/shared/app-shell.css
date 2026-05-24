@@ -546,107 +546,170 @@ input[type="radio"] {
   padding-top: 16px;
 }
 
+.manager-density-toggle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button--active {
+  background: rgba(138, 91, 36, 0.18);
+  color: #182126;
+}
+
 .manager-tabs__hint {
   margin: 0;
 }
 
-.manager-tabs {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.manager-tab {
+.manager-tab-grid {
+  --manager-grid-min-card-width: 220px;
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  border-radius: 14px;
-  background: rgba(24, 33, 38, 0.03);
-  padding: 10px 12px;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--manager-grid-min-card-width), 1fr));
 }
 
-.manager-tab--draggable {
-  cursor: grab;
+.manager-tab-card {
+  position: relative;
+  min-height: 156px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 247, 242, 0.94));
+  box-shadow:
+    inset 0 0 0 1px rgba(24, 33, 38, 0.06),
+    0 12px 24px rgba(24, 33, 38, 0.05);
+  outline: none;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
-.manager-tab--dragging {
-  opacity: 0.55;
+.manager-tab-card:focus-within,
+.manager-tab-card:focus {
+  box-shadow:
+    inset 0 0 0 2px rgba(138, 91, 36, 0.32),
+    0 16px 28px rgba(24, 33, 38, 0.08);
 }
 
-.manager-tab--drop-target {
-  outline: 2px solid rgba(138, 91, 36, 0.45);
-  background: rgba(240, 216, 178, 0.38);
+.manager-tab-card--dragging {
+  opacity: 0.58;
 }
 
-.manager-tabs__dropzone {
-  border: 1px dashed rgba(138, 91, 36, 0.36);
-  border-radius: 14px;
-  background: rgba(240, 216, 178, 0.18);
-  color: #5f6a72;
-  padding: 10px 12px;
-  text-align: center;
+.manager-tab-card--drop-target {
+  box-shadow:
+    inset 0 0 0 2px rgba(138, 91, 36, 0.42),
+    0 12px 24px rgba(24, 33, 38, 0.05);
+  background: rgba(240, 216, 178, 0.34);
 }
 
-.manager-tabs__dropzone--active {
-  border-color: rgba(138, 91, 36, 0.72);
-  background: rgba(240, 216, 178, 0.46);
+.manager-tab-card__actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.manager-tab-card:is(:hover, :focus-within, [data-actions-visible="true"]) .manager-tab-card__actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.manager-tab-card__icon-button {
+  appearance: none;
+  border: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: rgba(24, 33, 38, 0.08);
   color: #182126;
+  cursor: pointer;
 }
 
-.manager-tab__icon {
+.manager-tab-card__icon-button:hover {
+  background: rgba(138, 91, 36, 0.16);
+}
+
+.manager-tab-card__icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.manager-tab-card__body {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-content: start;
+  gap: 12px;
+  min-height: 100%;
+  padding: 16px;
+}
+
+.manager-tab-card__icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   background: rgba(24, 33, 38, 0.08);
   overflow: hidden;
 }
 
-.manager-tab__icon img {
-  width: 18px;
-  height: 18px;
+.manager-tab-card__icon img {
+  width: 20px;
+  height: 20px;
 }
 
-.manager-tab__copy {
+.manager-tab-card__copy {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
 }
 
-.manager-tab__title {
-  appearance: none;
-  border: 0;
-  background: transparent;
+.manager-tab-card__copy strong,
+.manager-tab-card__copy span,
+.manager-tab-card__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-tab-card__copy strong {
+  display: block;
   color: #1f4db8;
-  cursor: pointer;
   font-size: 16px;
-  overflow: hidden;
-  padding: 0;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.manager-tab__title:disabled {
+.manager-tab-card__copy span {
   color: #5f6a72;
-  cursor: default;
+  font-size: 13px;
 }
 
-.manager-tab__url {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.manager-tab-card__meta {
+  color: #7b6447;
+  font-size: 12px;
 }
 
-.manager-tab__actions {
+.manager-tab-grid__dropzone {
+  min-height: 88px;
+  border: 1px dashed rgba(138, 91, 36, 0.36);
+  border-radius: 16px;
+  background: rgba(240, 216, 178, 0.18);
+  color: #5f6a72;
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+}
+
+.manager-tab-grid__dropzone--active {
+  border-color: rgba(138, 91, 36, 0.72);
+  background: rgba(240, 216, 178, 0.44);
+  color: #182126;
 }
 
 .manager-empty-state {
@@ -779,8 +842,7 @@ input[type="radio"] {
 
   .manager-workbench,
   .manager-detail__meta-row,
-  .manager-detail__header,
-  .manager-tab {
+  .manager-detail__header {
     grid-template-columns: minmax(0, 1fr);
     flex-direction: column;
     align-items: stretch;
