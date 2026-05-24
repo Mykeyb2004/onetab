@@ -69,3 +69,17 @@ test("new tab can restore the latest session without opening manager", async ({ 
   await expect(page.getByText("Restored 2 tab(s) in a new window.")).toBeVisible();
   await expect(page.getByText("Research Bundle")).not.toBeVisible();
 });
+
+test("new tab session cards open manager focused on the selected session", async ({ context }) => {
+  const page = await context.newPage();
+  await seedNewTabState(page, [
+    createSeededSession("session-1", "Alpha Bundle", 2),
+    createSeededSession("session-2", "Beta Bundle", 3)
+  ]);
+
+  await page.getByRole("button", { name: "Manage Beta Bundle" }).click();
+
+  await expect(page).toHaveURL(/manager\.html\?session=session-2$/);
+  await expect(page.getByText("Beta Bundle Tab 1")).toBeVisible();
+  await expect(page.getByText("Alpha Bundle Tab 1")).not.toBeVisible();
+});

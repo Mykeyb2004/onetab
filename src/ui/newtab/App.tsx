@@ -64,6 +64,12 @@ export function NewTabApp() {
     }
   }
 
+  function openManagerForSession(sessionId: string) {
+    window.location.assign(
+      chrome.runtime.getURL(`manager.html?session=${encodeURIComponent(sessionId)}`)
+    );
+  }
+
   const latestSession = pageState.recentSessions[0] ?? pageState.pinnedSessions[0] ?? null;
 
   return (
@@ -135,14 +141,24 @@ export function NewTabApp() {
                           <strong>{session.title}</strong>
                           <p className="session-card__meta muted">{session.tabCount} saved tab(s)</p>
                         </div>
-                        <button
-                          className="button button--secondary button--small"
-                          disabled={busyKey !== null}
-                          onClick={() => handleRestoreSession(session.id)}
-                          type="button"
-                        >
-                          Restore
-                        </button>
+                        <div className="inline-actions">
+                          <button
+                            className="button button--secondary button--small"
+                            disabled={busyKey !== null}
+                            onClick={() => handleRestoreSession(session.id)}
+                            type="button"
+                          >
+                            Restore
+                          </button>
+                          <button
+                            className="button button--quiet button--small"
+                            disabled={busyKey !== null}
+                            onClick={() => openManagerForSession(session.id)}
+                            type="button"
+                          >
+                            {`Manage ${session.title}`}
+                          </button>
+                        </div>
                       </div>
                       <ul className="list">
                         {session.previewTabs.map((tab) => (

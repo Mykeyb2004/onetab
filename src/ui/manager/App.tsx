@@ -118,6 +118,11 @@ function buildSelection(
   };
 }
 
+function readPreferredSessionIdFromLocation(search: string): string | null {
+  const sessionId = new URLSearchParams(search).get("session");
+  return sessionId && sessionId.trim().length > 0 ? sessionId : null;
+}
+
 function parseDraggedTabPayload(rawPayload: string): DraggedTabPayload | null {
   if (!rawPayload) {
     return null;
@@ -146,6 +151,9 @@ function parseDraggedTabPayload(rawPayload: string): DraggedTabPayload | null {
 }
 
 export function ManagerApp() {
+  const preferredSessionIdRef = useRef<string | null>(
+    readPreferredSessionIdFromLocation(window.location.search)
+  );
   const [sessionCollections, setSessionCollections] = useState<SessionCollections>({
     activeSessions: [],
     trashedSessions: []
@@ -235,12 +243,17 @@ export function ManagerApp() {
           return;
         }
 
-        const nextSelection = buildSelection(collections, "active", null);
+        const nextSelection = buildSelection(
+          collections,
+          "active",
+          preferredSessionIdRef.current
+        );
 
         setSessionCollections(collections);
         setSelectedBucket(nextSelection.bucket);
         setSelectedSessionId(nextSelection.sessionId);
         setDensityPreference(settings.managerGridDensityPreference);
+        preferredSessionIdRef.current = null;
         setStatus(
           `已加载 ${collections.activeSessions.length} 个分组，回收站中有 ${collections.trashedSessions.length} 个分组。`
         );
