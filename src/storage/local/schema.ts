@@ -14,7 +14,8 @@ export const defaultSettings: ExtensionSettings = {
   restoreBehavior: "remove-group",
   defaultClickAction: "capture-current-window",
   showCaptureFeedback: true,
-  enableContextMenu: true
+  enableContextMenu: true,
+  managerGridDensityPreference: "enhanced"
 };
 
 export function createDefaultRootState(): RootState {
@@ -117,7 +118,9 @@ export function migrateRootState(input: unknown): RootState {
         enableContextMenu:
           typeof input.settings.enableContextMenu === "boolean"
             ? input.settings.enableContextMenu
-            : true
+            : true,
+        managerGridDensityPreference:
+          input.settings.managerGridDensityPreference === "compact" ? "compact" : "enhanced"
       }
     : { ...defaultSettings };
 
