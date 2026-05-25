@@ -297,6 +297,73 @@ test("manager hides the restore action for pinned groups", async ({
   await expect(managerPage.locator('button[aria-label="还原并移除 “Pinned Research Tab 1”"]')).toHaveCount(0);
 });
 
+test("manager keeps card color families stable when icons are missing", async ({
+  context,
+  extensionId
+}) => {
+  const managerPage = await context.newPage();
+  await seedManagerState(extensionId, managerPage, [
+    {
+      id: "session-1",
+      title: "Tint Demo",
+      createdAt: "2026-04-19T10:00:00.000Z",
+      updatedAt: "2026-04-19T10:00:00.000Z",
+      trashedAt: null,
+      tabCount: 3,
+      pinned: false,
+      sourceWindowId: 1,
+      tabs: [
+        {
+          id: "tab-1",
+          title: "Example Docs",
+          url: "https://example.com/docs",
+          favIconUrl: null,
+          createdAt: "2026-04-19T10:00:00.000Z",
+          lastOpenedAt: null,
+          originalIndex: 0
+        },
+        {
+          id: "tab-2",
+          title: "Example Home",
+          url: "https://example.com/home",
+          favIconUrl:
+            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%231f4db8'/%3E%3C/svg%3E",
+          createdAt: "2026-04-19T10:00:00.000Z",
+          lastOpenedAt: null,
+          originalIndex: 1
+        },
+        {
+          id: "tab-3",
+          title: "Broken Import",
+          url: "not-a-valid-url",
+          favIconUrl: null,
+          createdAt: "2026-04-19T10:00:00.000Z",
+          lastOpenedAt: null,
+          originalIndex: 2
+        }
+      ]
+    }
+  ]);
+
+  const cards = managerPage.locator(".manager-tab-card");
+
+  await expect(cards).toHaveCount(3);
+  await expect(cards.nth(0)).toHaveAttribute("data-color-family", "orange");
+  await expect(cards.nth(1)).toHaveAttribute("data-color-family", "orange");
+  await expect(cards.nth(2)).toHaveAttribute("data-color-family", "neutral");
+
+  await expect(cards.nth(0).locator(".manager-tab-card__icon")).toHaveAttribute(
+    "data-has-favicon",
+    "false"
+  );
+  await expect(cards.nth(1).locator(".manager-tab-card__icon")).toHaveAttribute(
+    "data-has-favicon",
+    "true"
+  );
+  await expect(cards.nth(0).locator(".manager-tab-card__icon span")).toHaveText("E");
+  await expect(cards.nth(1).locator(".manager-tab-card__icon img")).toBeVisible();
+});
+
 test("manager opens the saved tab when the card body is clicked", async ({
   context,
   extensionId
