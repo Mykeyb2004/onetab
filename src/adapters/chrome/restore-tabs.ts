@@ -17,5 +17,20 @@ export const chromeRestoreTabsAdapter: RestoreTabsAdapter = {
   async openTab(url) {
     const createdTab = await chrome.tabs.create({ url });
     return createdTab?.id ?? null;
+  },
+
+  async replaceCurrentTab(url) {
+    const currentTab = await chrome.tabs.getCurrent();
+
+    if (currentTab?.id == null) {
+      return this.openTab(url);
+    }
+
+    const updatedTab = await chrome.tabs.update(currentTab.id, {
+      url,
+      active: true
+    });
+
+    return updatedTab?.id ?? currentTab.id;
   }
 };

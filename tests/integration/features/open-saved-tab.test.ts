@@ -27,13 +27,19 @@ function createMemoryStorage(): ExtensionStorageArea {
   };
 }
 
-function createRestoreTabsAdapter(onOpenTab?: (url: string) => Promise<number | null> | number | null): RestoreTabsAdapter {
+function createRestoreTabsAdapter(options?: {
+  onOpenTab?: (url: string) => Promise<number | null> | number | null;
+  onReplaceCurrentTab?: (url: string) => Promise<number | null> | number | null;
+}): RestoreTabsAdapter {
   return {
     async openTabsInNewWindow() {
       return 91;
     },
     async openTab(url) {
-      return (await onOpenTab?.(url)) ?? 92;
+      return (await options?.onOpenTab?.(url)) ?? 92;
+    },
+    async replaceCurrentTab(url) {
+      return (await options?.onReplaceCurrentTab?.(url)) ?? 93;
     }
   };
 }
@@ -73,9 +79,11 @@ describe("openSavedTab", () => {
 
     const result = await openSavedTab("session-1", "tab-1", {
       storage,
-      tabs: createRestoreTabsAdapter((url) => {
-        openedUrls.push(url);
-        return 123;
+      tabs: createRestoreTabsAdapter({
+        onOpenTab: (url) => {
+          openedUrls.push(url);
+          return 123;
+        }
       }),
       now: () => new Date(2026, 3, 19, 21, 0)
     });
@@ -85,6 +93,45 @@ describe("openSavedTab", () => {
     expect(result.ok).toBe(true);
     expect(openedUrls).toEqual(["https://example.com/dashboard"]);
     expect(state.sessions[0].tabs).toHaveLength(1);
+    expect(state.sessions[0].tabs[0].lastOpenedAt).toBe("2026-04-19T13:00:00.000Z");
+  });
+
+  it("should replace the current tab when the current-tab target is requested", async () => {
+    const storage = createMemoryStorage();
+    const openedUrls: string[] = [];
+    const replacedUrls: string[] = [];
+    const rootState = createDefaultRootState();
+    rootState.sessions = [createSessionGroup()];
+
+    await writeRootState(storage, rootState);
+
+    const result = await openSavedTab(
+      "session-1",
+      "tab-1",
+      {
+        storage,
+        tabs: createRestoreTabsAdapter({
+          onOpenTab: (url) => {
+            openedUrls.push(url);
+            return 123;
+          },
+          onReplaceCurrentTab: (url) => {
+            replacedUrls.push(url);
+            return 456;
+          }
+        }),
+        now: () => new Date(2026, 3, 19, 21, 0)
+      },
+      {
+        target: "current-tab"
+      }
+    );
+
+    const state = await readRootState(storage);
+
+    expect(result.ok).toBe(true);
+    expect(openedUrls).toEqual([]);
+    expect(replacedUrls).toEqual(["https://example.com/dashboard"]);
     expect(state.sessions[0].tabs[0].lastOpenedAt).toBe("2026-04-19T13:00:00.000Z");
   });
 });

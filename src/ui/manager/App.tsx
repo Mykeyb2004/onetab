@@ -456,9 +456,14 @@ export function ManagerApp() {
     setBusyKey(`open:${tabId}`);
 
     try {
-      const result = await openSavedTab(sessionId, tabId);
-      setStatus(result.message);
-      await loadSessionCollections(selectedBucket, sessionId);
+      const result = await openSavedTab(sessionId, tabId, undefined, {
+        target: "current-tab"
+      });
+
+      if (!result.ok) {
+        setStatus(result.message);
+        await loadSessionCollections(selectedBucket, sessionId);
+      }
     } catch (nextError: unknown) {
       setStatus(nextError instanceof Error ? nextError.message : "打开标签页失败。");
     } finally {

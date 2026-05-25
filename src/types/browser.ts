@@ -22,4 +22,5 @@ export interface TabsAdapter {
 export interface RestoreTabsAdapter {
   openTabsInNewWindow(urls: string[]): Promise<number | null>;
   openTab(url: string): Promise<number | null>;
+  replaceCurrentTab?(url: string): Promise<number | null>;
 }

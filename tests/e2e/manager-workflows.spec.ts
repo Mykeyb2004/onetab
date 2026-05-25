@@ -304,12 +304,12 @@ test("manager opens the saved tab when the card body is clicked", async ({
   const managerPage = await context.newPage();
   await seedManagerState(extensionId, managerPage);
 
-  const openedPagePromise = context.waitForEvent("page");
-  await managerPage.locator(".manager-tab-card__body").first().click();
+  const pageCountBeforeOpen = context.pages().length;
 
-  const openedPage = await openedPagePromise;
-  await openedPage.waitForLoadState("domcontentloaded");
+  await Promise.all([
+    managerPage.waitForURL("https://example.com/react-compiler"),
+    managerPage.locator(".manager-tab-card__body").first().click()
+  ]);
 
-  await expect.poll(() => openedPage.url()).toBe("https://example.com/react-compiler");
-  await expect(managerPage.getByText("Testing Docs")).toBeVisible();
+  expect(context.pages()).toHaveLength(pageCountBeforeOpen);
 });
