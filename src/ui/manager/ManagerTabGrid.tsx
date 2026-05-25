@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { CSSProperties, DragEvent, FocusEvent, KeyboardEvent, PointerEvent } from "react";
 import type { SavedTab } from "../../types/session";
+import { resolveManagerCardColorFamily } from "./card-color-family";
 import type { EffectiveManagerGridDensity } from "./grid-density";
 import { getGridCardMinWidth } from "./grid-density";
 
@@ -133,11 +134,14 @@ export function ManagerTabGrid({
     >
       {tabs.map((savedTab) => {
         const actionsVisible = revealedActionTabId === savedTab.id;
+        const colorFamily = resolveManagerCardColorFamily(savedTab.url);
+        const hasFavicon = Boolean(savedTab.favIconUrl);
 
         return (
           <article
             className={`manager-tab-card ${draggedTabId === savedTab.id ? "manager-tab-card--dragging" : ""} ${dragOverTabId === savedTab.id ? "manager-tab-card--drop-target" : ""}`}
             data-actions-visible={actionsVisible ? "true" : "false"}
+            data-color-family={colorFamily}
             key={savedTab.id}
             onBlur={(event) => handleCardBlur(event, savedTab.id)}
             onFocus={() => setRevealedActionTabId(savedTab.id)}
@@ -156,9 +160,13 @@ export function ManagerTabGrid({
               role={isInteractive ? "button" : undefined}
               tabIndex={isInteractive ? 0 : -1}
             >
-              <div className="manager-tab-card__icon">
-                {savedTab.favIconUrl ? (
-                  <img alt="" src={savedTab.favIconUrl} />
+              <div
+                className="manager-tab-card__icon"
+                data-color-family={colorFamily}
+                data-has-favicon={hasFavicon ? "true" : "false"}
+              >
+                {hasFavicon ? (
+                  <img alt="" src={savedTab.favIconUrl ?? undefined} />
                 ) : (
                   <span>{savedTab.title.slice(0, 1).toUpperCase()}</span>
                 )}

@@ -155,4 +155,63 @@ describe("ManagerTabGrid", () => {
       markup.indexOf("manager-tab-card__actions")
     );
   });
+
+  it("should attach stable color markers for cards with and without favicons", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ManagerTabGrid, {
+        busyKey: null,
+        density: "enhanced",
+        dragOverTabId: null,
+        draggedTabId: null,
+        isAutoDowngraded: false,
+        isInteractive: true,
+        isTabDropAtEnd: false,
+        onClearDragState: () => {},
+        onDeleteTab: () => {},
+        onOpenTab: () => {},
+        onRestoreTab: () => {},
+        showRestoreAction: true,
+        onTabDragOver: () => {},
+        onTabDragStart: () => {},
+        onTabDrop: () => {},
+        sessionId: "session-1",
+        tabs: [
+          {
+            id: "tab-1",
+            title: "Example Docs",
+            url: "https://example.com/docs",
+            favIconUrl: null,
+            createdAt: "2026-05-24T12:00:00.000Z",
+            lastOpenedAt: null,
+            originalIndex: 0
+          },
+          {
+            id: "tab-2",
+            title: "Example Home",
+            url: "https://example.com/home",
+            favIconUrl:
+              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%231f4db8'/%3E%3C/svg%3E",
+            createdAt: "2026-05-24T12:00:00.000Z",
+            lastOpenedAt: null,
+            originalIndex: 1
+          },
+          {
+            id: "tab-3",
+            title: "Broken Import",
+            url: "not-a-valid-url",
+            favIconUrl: null,
+            createdAt: "2026-05-24T12:00:00.000Z",
+            lastOpenedAt: null,
+            originalIndex: 2
+          }
+        ]
+      })
+    );
+
+    expect(markup).toContain('data-color-family="orange"');
+    expect(markup).toContain('data-color-family="neutral"');
+    expect(markup).toContain('data-has-favicon="false"');
+    expect(markup).toContain('data-has-favicon="true"');
+    expect(markup).toContain(">E</span>");
+  });
 });
