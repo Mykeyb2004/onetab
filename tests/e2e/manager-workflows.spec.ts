@@ -1,4 +1,5 @@
 import { expect, test } from "./extension-harness";
+import type { SessionGroup } from "../../src/types/session";
 
 test.skip(
   !process.env.RUN_EXTENSION_E2E,
@@ -32,7 +33,7 @@ function createSeededSession(sessionId: string, title: string, tabCount: number)
 async function seedManagerState(
   extensionId: string,
   managerPage: import("@playwright/test").Page,
-  sessions = [
+  sessions: SessionGroup[] = [
     {
       id: "session-1",
       title: "Research Bundle",
@@ -72,7 +73,7 @@ async function seedManagerState(
       nextSessions
     }: {
       storageKey: string;
-      nextSessions: typeof sessions;
+      nextSessions: SessionGroup[];
     }) => {
       await chrome.storage.local.set({
         [storageKey]: {
@@ -93,6 +94,9 @@ async function seedManagerState(
   );
 
   await managerPage.reload();
+  await expect(managerPage.getByRole("heading", { name: "TabVault Manager" })).toBeVisible({
+    timeout: 15000
+  });
 }
 
 async function expectGridDensity(
@@ -139,6 +143,7 @@ test("manager can restore a tab from seeded session state", async ({
   const managerPage = await context.newPage();
   await seedManagerState(extensionId, managerPage);
 
+  await expect(managerPage.getByRole("heading", { name: "Research Bundle" })).toBeVisible();
   await managerPage.locator(".manager-tab-card__body").first().focus();
   await managerPage.locator('button[aria-label="还原并移除 “React Compiler”"]').click();
   await expect(managerPage.getByText("Testing Docs")).toBeVisible();
@@ -239,6 +244,7 @@ test("manager auto-downgrades enhanced density when the pane gets too narrow", a
     createSeededSession("session-1", "Long Session", 8)
   ]);
 
+  await expect(managerPage.locator(".manager-density-toggle")).toBeVisible();
   await managerPage.getByRole("button", { name: "增强" }).click();
   await expectGridDensity(managerPage, "enhanced");
 
@@ -265,6 +271,7 @@ test("manager exposes icon actions on focused cards without triggering drag", as
   await seedManagerState(extensionId, managerPage);
 
   const firstCardBody = managerPage.locator(".manager-tab-card__body").first();
+  await expect(firstCardBody).toBeVisible({ timeout: 15000 });
   await firstCardBody.focus();
 
   await expect(managerPage.locator('button[aria-label="还原并移除 “React Compiler”"]')).toBeVisible();
@@ -347,6 +354,7 @@ test("manager keeps card color families stable when icons are missing", async ({
 
   const cards = managerPage.locator(".manager-tab-card");
 
+  await expect(managerPage.getByRole("heading", { name: "Tint Demo" })).toBeVisible();
   await expect(cards).toHaveCount(3);
   await expect(cards.nth(0)).toHaveAttribute("data-color-family", "orange");
   await expect(cards.nth(1)).toHaveAttribute("data-color-family", "orange");

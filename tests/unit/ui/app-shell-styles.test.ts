@@ -90,7 +90,7 @@ describe("shared app shell styles", () => {
     const css = readFileSync(resolve(process.cwd(), "src/ui/shared/app-shell.css"), "utf8");
 
     expect(css).toMatch(
-      /\.manager-tab-card\s*\{[\s\S]*border:\s*1px solid rgba\(24,\s*33,\s*38,\s*0\.1\);[\s\S]*background:\s*linear-gradient\(180deg,\s*rgba\(251,\s*248,\s*242,\s*0\.98\),\s*rgba\(244,\s*239,\s*230,\s*0\.96\)\);[\s\S]*box-shadow:\s*0 1px 0 rgba\(255,\s*255,\s*255,\s*0\.45\) inset,\s*0 16px 30px rgba\(24,\s*33,\s*38,\s*0\.08\);[\s\S]*\}/
+      /\.manager-tab-card\s*\{[\s\S]*border:\s*1px solid rgba\(24,\s*33,\s*38,\s*0\.1\);[\s\S]*background:\s*linear-gradient\(180deg,\s*var\(--manager-card-tint-top\),\s*var\(--manager-card-tint-bottom\)\);[\s\S]*box-shadow:\s*0 1px 0 rgba\(255,\s*255,\s*255,\s*0\.45\) inset,\s*0 16px 30px rgba\(24,\s*33,\s*38,\s*0\.08\);[\s\S]*\}/
     );
   });
 
@@ -101,6 +101,28 @@ describe("shared app shell styles", () => {
     expect(managerApp).not.toContain('eyebrow="Manager"');
     expect(css).toMatch(
       /\.app-shell:has\(.manager-workbench\)\s*\{[\s\S]*padding-top:\s*16px;[\s\S]*gap:\s*18px;[\s\S]*\}/
+    );
+  });
+
+  it("should tint manager cards through stable color-family variables", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/ui/shared/app-shell.css"), "utf8");
+
+    expect(css).toMatch(
+      /\.manager-tab-card\s*\{[\s\S]*--manager-card-tint-top:\s*rgba\(251,\s*248,\s*242,\s*0\.98\);[\s\S]*background:\s*linear-gradient\(180deg,\s*var\(--manager-card-tint-top\),\s*var\(--manager-card-tint-bottom\)\);[\s\S]*\}/
+    );
+    expect(css).toMatch(
+      /\.manager-tab-card\[data-color-family="blue"\]\s*\{[\s\S]*--manager-card-tint-top:\s*rgba\(242,\s*247,\s*255,\s*0\.98\);[\s\S]*--manager-card-icon-tint:\s*rgba\(93,\s*140,\s*242,\s*0\.14\);[\s\S]*\}/
+    );
+    expect(css).toMatch(
+      /\.manager-tab-card\[data-color-family="neutral"\]\s*\{[\s\S]*--manager-card-fallback-badge:\s*#7b6447;[\s\S]*\}/
+    );
+  });
+
+  it("should render fallback initials as a stronger badge when favicons are missing", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/ui/shared/app-shell.css"), "utf8");
+
+    expect(css).toMatch(
+      /\.manager-tab-card__icon\[data-has-favicon="false"\]\s*span\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*width:\s*24px;[\s\S]*height:\s*24px;[\s\S]*background:\s*var\(--manager-card-fallback-badge\);[\s\S]*color:\s*#fff;[\s\S]*\}/
     );
   });
 });
