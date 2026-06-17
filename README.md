@@ -32,6 +32,14 @@ npm run dev
 
 它会持续监听并重建 `dist/`，适合配合 Chrome 扩展页手动刷新调试。
 
+如果只是想在网页里预览 Manager 主界面和大部分 UI 交互：
+
+```bash
+npm run dev:preview
+```
+
+然后打开 `http://127.0.0.1:5173/preview.html`。预览页会自动载入仓库根目录的 `export20260524.spd`，并用浏览器 `localStorage` 保留预览数据；需要重置时打开 `http://127.0.0.1:5173/preview.html?reset=1`。
+
 ## 质量检查
 
 ```bash
