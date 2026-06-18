@@ -7,8 +7,8 @@ type StorageChangeListener = (
   areaName: string
 ) => void;
 
-function readPreviewStorageValue(key: string): unknown {
-  const rawValue = window.localStorage.getItem(key);
+function readPreviewStorageValue(storage: Storage, key: string): unknown {
+  const rawValue = storage.getItem(key);
 
   if (rawValue === null) {
     return undefined;
@@ -21,25 +21,26 @@ function readPreviewStorageValue(key: string): unknown {
   }
 }
 
-function writePreviewStorageValue(key: string, value: unknown): void {
-  window.localStorage.setItem(key, JSON.stringify(value));
+function writePreviewStorageValue(storage: Storage, key: string, value: unknown): void {
+  storage.setItem(key, JSON.stringify(value));
 }
 
 function createPreviewStorageArea(
+  storage: Storage,
   listeners: Set<StorageChangeListener>
 ): ExtensionStorageArea {
   return {
     async get(key) {
       return {
-        [key]: readPreviewStorageValue(key)
+        [key]: readPreviewStorageValue(storage, key)
       };
     },
     async set(items) {
       const changes: Record<string, { oldValue?: unknown; newValue?: unknown }> = {};
 
       Object.entries(items).forEach(([key, value]) => {
-        const oldValue = readPreviewStorageValue(key);
-        writePreviewStorageValue(key, value);
+        const oldValue = readPreviewStorageValue(storage, key);
+        writePreviewStorageValue(storage, key, value);
         changes[key] = {
           oldValue,
           newValue: value
@@ -51,8 +52,8 @@ function createPreviewStorageArea(
       }
     },
     async remove(key) {
-      const oldValue = readPreviewStorageValue(key);
-      window.localStorage.removeItem(key);
+      const oldValue = readPreviewStorageValue(storage, key);
+      storage.removeItem(key);
       listeners.forEach((listener) =>
         listener(
           {
@@ -68,10 +69,10 @@ function createPreviewStorageArea(
   };
 }
 
-function createChromeRuntimeShim() {
+function createChromeRuntimeShim(baseUrl: string) {
   return {
     getURL(path: string) {
-      return new URL(path, window.location.href).toString();
+      return new URL(path, baseUrl).toString();
     },
     async openOptionsPage() {
       return undefined;
@@ -124,16 +125,19 @@ function createChromeWindowsShim() {
   };
 }
 
-export async function installPreviewChromeShim(spdContent: string): Promise<void> {
+export async function installPreviewChromeShim(
+  spdContent: string,
+  dependencies: { baseUrl: string; globalScope: typeof globalThis; storage: Storage }
+): Promise<void> {
   const listeners = new Set<StorageChangeListener>();
-  const storage = createPreviewStorageArea(listeners);
+  const storage = createPreviewStorageArea(dependencies.storage, listeners);
 
-  if (window.localStorage.getItem(ROOT_STORAGE_KEY) === null) {
+  if (dependencies.storage.getItem(ROOT_STORAGE_KEY) === null) {
     await seedPreviewData(storage, spdContent);
   }
 
   const chromeShim = {
-    runtime: createChromeRuntimeShim(),
+    runtime: createChromeRuntimeShim(dependencies.baseUrl),
     storage: {
       local: storage,
       onChanged: {
@@ -185,5 +189,8 @@ export async function installPreviewChromeShim(spdContent: string): Promise<void
     }
   };
 
-  Object.assign(globalThis.chrome ?? {}, chromeShim);
+  const globalScope = dependencies.globalScope as typeof globalThis & {
+    chrome?: typeof chrome | undefined;
+  };
+  globalScope.chrome = Object.assign({}, globalScope.chrome ?? {}, chromeShim) as typeof chrome;
 }
