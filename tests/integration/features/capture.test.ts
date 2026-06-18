@@ -472,4 +472,40 @@ describe("capture feature", () => {
 
     expect(closedTabIds).toEqual([]);
   });
+
+  it("should keep the saved page in notes when closing the original tab fails", async () => {
+    const storage = createMemoryStorage();
+    const tabs = createTabsAdapter([], {
+      onClose() {
+        throw new Error("close failed");
+      }
+    });
+
+    const result = await captureBrowserTab(
+      {
+        id: 91,
+        windowId: 9,
+        index: 0,
+        title: "Close Failure",
+        url: "https://example.com/close-failure"
+      },
+      {
+        storage,
+        tabs,
+        now: () => new Date("2026-04-20T13:00:00.000Z")
+      }
+    );
+
+    const state = await readRootState(storage);
+
+    expect(result.ok).toBe(false);
+    expect(result.capturedCount).toBe(1);
+    expect(result.closedCount).toBe(0);
+    expect(result.message).toBe(
+      `Added the current page to "${DEFAULT_NOTES_GROUP_TITLE}", but failed to close the original tab.`
+    );
+    expect(state.sessions).toHaveLength(1);
+    expect(state.sessions[0].title).toBe(DEFAULT_NOTES_GROUP_TITLE);
+    expect(state.sessions[0].tabs[0].url).toBe("https://example.com/close-failure");
+  });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_NOTES_GROUP_TITLE } from "../../../src/domain/sessions/default-notes-group";
 import { addBrowserTabToSessionGroup } from "../../../src/features/sessions/add-browser-tab-to-session-group";
 import {
   readRootState,
@@ -50,7 +51,7 @@ function createTabsAdapter(onClose?: (tabIds: number[]) => void): TabsAdapter {
   };
 }
 
-function createSessionGroup(): SessionGroup {
+function createSessionGroup(overrides: Partial<SessionGroup> = {}): SessionGroup {
   return {
     id: "session-1",
     title: "Recent Research",
@@ -70,7 +71,8 @@ function createSessionGroup(): SessionGroup {
         lastOpenedAt: null,
         originalIndex: 0
       }
-    ]
+    ],
+    ...overrides
   };
 }
 
@@ -107,5 +109,59 @@ describe("addBrowserTabToSessionGroup", () => {
     expect(closedTabIds).toEqual([2]);
     expect(state.sessions[0].tabCount).toBe(2);
     expect(state.sessions[0].tabs[1].title).toBe("Current Page");
+  });
+
+  it("should append explicit fixed or recent group captures to the chosen group instead of notes", async () => {
+    const storage = createMemoryStorage();
+    const rootState = createDefaultRootState();
+    rootState.sessions = [
+      createSessionGroup({
+        id: "session-notes",
+        title: DEFAULT_NOTES_GROUP_TITLE
+      }),
+      createSessionGroup({
+        id: "session-target",
+        title: "Fixed Reading",
+        tabs: [],
+        tabCount: 0
+      })
+    ];
+
+    await writeRootState(storage, rootState);
+
+    const result = await addBrowserTabToSessionGroup(
+      "session-target",
+      {
+        id: 3,
+        windowId: 4,
+        index: 3,
+        title: "Chosen Target Page",
+        url: "https://example.com/chosen-target"
+      } as BrowserTab,
+      {
+        storage,
+        tabs: createTabsAdapter(),
+        now: () => new Date(2026, 3, 19, 21, 0)
+      }
+    );
+
+    const state = await readRootState(storage);
+    const notesGroup = state.sessions.find(
+      (sessionGroup) => sessionGroup.id === "session-notes"
+    );
+    const targetGroup = state.sessions.find(
+      (sessionGroup) => sessionGroup.id === "session-target"
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.sessionId).toBe("session-target");
+    expect(notesGroup?.tabCount).toBe(1);
+    expect(notesGroup?.tabs.map((tab) => tab.url)).toEqual([
+      "https://example.com/initial"
+    ]);
+    expect(targetGroup?.tabCount).toBe(1);
+    expect(targetGroup?.tabs.map((tab) => tab.url)).toEqual([
+      "https://example.com/chosen-target"
+    ]);
   });
 });
