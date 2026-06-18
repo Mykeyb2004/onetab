@@ -65,6 +65,14 @@ interface PrunedBulkSelection {
   trashSessionIds: string[];
 }
 
+function areSessionIdArraysEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((sessionId, index) => sessionId === right[index]);
+}
+
 function formatRelativeSessionTime(isoString: string): string {
   const targetDate = new Date(isoString);
   const diffMs = Date.now() - targetDate.getTime();
@@ -265,6 +273,32 @@ export function ManagerApp() {
     (session) => session.title !== DEFAULT_NOTES_GROUP_TITLE
   ).length;
 
+  const pruneSelectionIds = useCallback((collections: SessionCollections) => {
+    setSelectedActiveSessionIds((currentActiveSessionIds) => {
+      const nextActiveSessionIds = pruneBulkSelection(
+        collections,
+        currentActiveSessionIds,
+        []
+      ).activeSessionIds;
+
+      return areSessionIdArraysEqual(currentActiveSessionIds, nextActiveSessionIds)
+        ? currentActiveSessionIds
+        : nextActiveSessionIds;
+    });
+
+    setSelectedTrashSessionIds((currentTrashSessionIds) => {
+      const nextTrashSessionIds = pruneBulkSelection(
+        collections,
+        [],
+        currentTrashSessionIds
+      ).trashSessionIds;
+
+      return areSessionIdArraysEqual(currentTrashSessionIds, nextTrashSessionIds)
+        ? currentTrashSessionIds
+        : nextTrashSessionIds;
+    });
+  }, []);
+
   const loadSessionCollections = useCallback(async (
     preferredBucket: SessionBucket = selectedBucket,
     preferredSessionId: string | null = selectedSessionId
@@ -272,17 +306,11 @@ export function ManagerApp() {
     try {
       const nextCollections = await listSessionGroups();
       const nextSelection = buildSelection(nextCollections, preferredBucket, preferredSessionId);
-      const nextBulkSelection = pruneBulkSelection(
-        nextCollections,
-        selectedActiveSessionIds,
-        selectedTrashSessionIds
-      );
 
       setSessionCollections(nextCollections);
       setSelectedBucket(nextSelection.bucket);
       setSelectedSessionId(nextSelection.sessionId);
-      setSelectedActiveSessionIds(nextBulkSelection.activeSessionIds);
-      setSelectedTrashSessionIds(nextBulkSelection.trashSessionIds);
+      pruneSelectionIds(nextCollections);
       setError(null);
     } catch (nextError: unknown) {
       setError(
@@ -291,7 +319,7 @@ export function ManagerApp() {
           : "无法从本地存储中读取 TabVault 分组。"
       );
     }
-  }, [selectedActiveSessionIds, selectedBucket, selectedSessionId, selectedTrashSessionIds]);
+  }, [pruneSelectionIds, selectedBucket, selectedSessionId]);
 
   useEffect(() => {
     let alive = true;
@@ -307,17 +335,11 @@ export function ManagerApp() {
           "active",
           preferredSessionIdRef.current
         );
-        const nextBulkSelection = pruneBulkSelection(
-          collections,
-          selectedActiveSessionIds,
-          selectedTrashSessionIds
-        );
 
         setSessionCollections(collections);
         setSelectedBucket(nextSelection.bucket);
         setSelectedSessionId(nextSelection.sessionId);
-        setSelectedActiveSessionIds(nextBulkSelection.activeSessionIds);
-        setSelectedTrashSessionIds(nextBulkSelection.trashSessionIds);
+        pruneSelectionIds(collections);
         setDensityPreference(settings.managerGridDensityPreference);
         setSidebarPreference(settings.managerSidebarPreference);
         preferredSessionIdRef.current = null;
@@ -341,7 +363,7 @@ export function ManagerApp() {
     return () => {
       alive = false;
     };
-  }, [selectedActiveSessionIds, selectedTrashSessionIds]);
+  }, [pruneSelectionIds]);
 
   useEffect(() => {
     function handleStorageChange(
