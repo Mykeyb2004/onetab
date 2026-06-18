@@ -6,6 +6,12 @@ import { deleteSavedTab } from "../../features/sessions/delete-saved-tab";
 import { deleteSessionGroup } from "../../features/sessions/delete-session-group";
 import { deleteSessionGroupPermanently } from "../../features/sessions/delete-session-group-permanently";
 import {
+  batchDeleteSessionGroupsPermanently,
+  batchMoveSessionGroupsToTrash,
+  batchRestoreSessionGroupsFromTrash,
+  mergeSessionGroupsIntoDefaultNotesGroup
+} from "../../features/sessions/batch-session-groups";
+import {
   exportAllSessions,
   exportSingleSession
 } from "../../features/sessions/export-sessions";
@@ -26,6 +32,7 @@ import { searchSessions } from "../../features/sessions/search-sessions";
 import { togglePinSessionGroup } from "../../features/sessions/toggle-pin-session-group";
 import { loadExtensionSettings } from "../../features/settings/load-settings";
 import { saveSettings } from "../../features/settings/save-settings";
+import { DEFAULT_NOTES_GROUP_TITLE } from "../../domain/sessions/default-notes-group";
 import { isSessionGroupTrashed } from "../../domain/sessions/session-groups";
 import { ROOT_STATE_STORAGE_CONFIG_KEY } from "../../storage/root-state/config";
 import type { SearchHit } from "../../types/search";
@@ -35,6 +42,7 @@ import type {
 } from "../../types/settings";
 import type { SessionGroup } from "../../types/session";
 import { AppShell } from "../shared/AppShell";
+import { ManagerBulkActionToolbar } from "./ManagerBulkActionToolbar";
 import { ManagerTabGrid } from "./ManagerTabGrid";
 import { resolveManagerGridDensity } from "./grid-density";
 
@@ -176,6 +184,9 @@ export function ManagerApp() {
   const [showMoreActions, setShowMoreActions] = useState(false);
   const [isActiveExpanded, setIsActiveExpanded] = useState(true);
   const [isTrashExpanded, setIsTrashExpanded] = useState(true);
+  const [bulkSelectionBucket, setBulkSelectionBucket] = useState<SessionBucket | null>(null);
+  const [selectedActiveSessionIds, setSelectedActiveSessionIds] = useState<string[]>([]);
+  const [selectedTrashSessionIds, setSelectedTrashSessionIds] = useState<string[]>([]);
   const [hoveredActiveSessionMenuId, setHoveredActiveSessionMenuId] = useState<string | null>(
     null
   );
@@ -217,6 +228,19 @@ export function ManagerApp() {
   );
 
   const liveStatusMessage = error ?? status;
+  const isBulkSelectingActive = bulkSelectionBucket === "active";
+  const isBulkSelectingTrash = bulkSelectionBucket === "trash";
+  const selectedActiveSessionIdSet = useMemo(
+    () => new Set(selectedActiveSessionIds),
+    [selectedActiveSessionIds]
+  );
+  const selectedTrashSessionIdSet = useMemo(
+    () => new Set(selectedTrashSessionIds),
+    [selectedTrashSessionIds]
+  );
+  const selectableActiveSessionCount = sessionCollections.activeSessions.filter(
+    (session) => session.title !== DEFAULT_NOTES_GROUP_TITLE
+  ).length;
 
   const loadSessionCollections = useCallback(async (
     preferredBucket: SessionBucket = selectedBucket,
@@ -342,9 +366,52 @@ export function ManagerApp() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const activeIds = new Set(sessionCollections.activeSessions.map((session) => session.id));
+    const trashIds = new Set(sessionCollections.trashedSessions.map((session) => session.id));
+
+    setSelectedActiveSessionIds((current) =>
+      current.filter((sessionId) => activeIds.has(sessionId))
+    );
+    setSelectedTrashSessionIds((current) => current.filter((sessionId) => trashIds.has(sessionId)));
+  }, [sessionCollections]);
+
   function closeSessionMenus() {
     setHoveredActiveSessionMenuId(null);
     setHoveredTrashSessionMenuId(null);
+  }
+
+  function enterBulkSelection(bucket: SessionBucket) {
+    setShowMoreActions(false);
+    closeSessionMenus();
+    clearDragState();
+    setBulkSelectionBucket(bucket);
+  }
+
+  function cancelBulkSelection() {
+    setBulkSelectionBucket(null);
+    setSelectedActiveSessionIds([]);
+    setSelectedTrashSessionIds([]);
+  }
+
+  function toggleBulkSessionSelection(bucket: SessionBucket, sessionId: string) {
+    const updateSelection = (current: string[]) =>
+      current.includes(sessionId)
+        ? current.filter((selectedSessionId) => selectedSessionId !== sessionId)
+        : [...current, sessionId];
+
+    if (bucket === "active") {
+      const targetSession = sessionCollections.activeSessions.find((session) => session.id === sessionId);
+
+      if (targetSession?.title === DEFAULT_NOTES_GROUP_TITLE) {
+        return;
+      }
+
+      setSelectedActiveSessionIds(updateSelection);
+      return;
+    }
+
+    setSelectedTrashSessionIds(updateSelection);
   }
 
   function toggleActiveSessionMenu(sessionId: string) {
@@ -392,7 +459,9 @@ export function ManagerApp() {
   }
 
   function selectBucket(bucket: SessionBucket) {
-    const sessions = bucket === "trash" ? sessionCollections.trashedSessions : sessionCollections.activeSessions;
+    const sessions =
+      bucket === "trash" ? sessionCollections.trashedSessions : sessionCollections.activeSessions;
+    cancelBulkSelection();
     setShowMoreActions(false);
     closeSessionMenus();
     setSelectedBucket(bucket);
@@ -400,6 +469,7 @@ export function ManagerApp() {
   }
 
   function selectSession(bucket: SessionBucket, sessionId: string) {
+    cancelBulkSelection();
     setShowMoreActions(false);
     closeSessionMenus();
     setSelectedBucket(bucket);
@@ -414,6 +484,7 @@ export function ManagerApp() {
     }
 
     const bucket: SessionBucket = isSessionGroupTrashed(matchedSession) ? "trash" : "active";
+    cancelBulkSelection();
     setShowMoreActions(false);
     closeSessionMenus();
     setSelectedBucket(bucket);
@@ -703,6 +774,114 @@ export function ManagerApp() {
     }
   }
 
+  async function handleBatchMoveGroupsToTrash() {
+    const selectedCount = selectedActiveSessionIds.length;
+
+    if (selectedCount === 0) {
+      return;
+    }
+
+    const shouldMove = window.confirm(`将选中的 ${selectedCount} 个分组移动到回收站？`);
+
+    if (!shouldMove) {
+      return;
+    }
+
+    setBusyKey("batch-trash");
+    closeSessionMenus();
+
+    try {
+      const movedCount = await batchMoveSessionGroupsToTrash(selectedActiveSessionIds);
+      setStatus(`已将 ${movedCount} 个分组移动到回收站。`);
+      cancelBulkSelection();
+      await loadSessionCollections("active", null);
+    } catch (nextError: unknown) {
+      setStatus(nextError instanceof Error ? nextError.message : "批量移动到回收站失败。");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function handleBatchMergeGroupsIntoNotes() {
+    const selectedCount = selectedActiveSessionIds.length;
+
+    if (selectedCount === 0) {
+      return;
+    }
+
+    const shouldMerge = window.confirm(
+      `将选中的 ${selectedCount} 个分组合并入“笔记”？合并后原分组会直接删除。`
+    );
+
+    if (!shouldMerge) {
+      return;
+    }
+
+    setBusyKey("batch-merge-notes");
+    closeSessionMenus();
+
+    try {
+      const result = await mergeSessionGroupsIntoDefaultNotesGroup(selectedActiveSessionIds);
+      setStatus(`已将 ${result.mergedGroupCount} 个分组合并入“笔记”。`);
+      cancelBulkSelection();
+      await loadSessionCollections("active", result.targetSession.id);
+    } catch (nextError: unknown) {
+      setStatus(nextError instanceof Error ? nextError.message : "批量合并入笔记失败。");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function handleBatchRestoreGroupsFromTrash() {
+    const selectedCount = selectedTrashSessionIds.length;
+
+    if (selectedCount === 0) {
+      return;
+    }
+
+    setBusyKey("batch-restore-trash");
+    closeSessionMenus();
+
+    try {
+      const restoredCount = await batchRestoreSessionGroupsFromTrash(selectedTrashSessionIds);
+      setStatus(`已恢复 ${restoredCount} 个分组。`);
+      cancelBulkSelection();
+      await loadSessionCollections("active", null);
+    } catch (nextError: unknown) {
+      setStatus(nextError instanceof Error ? nextError.message : "批量恢复失败。");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function handleBatchDeleteGroupsPermanently() {
+    const selectedCount = selectedTrashSessionIds.length;
+
+    if (selectedCount === 0) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(`永久删除选中的 ${selectedCount} 个分组？此操作无法撤销。`);
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setBusyKey("batch-permanent-delete");
+    closeSessionMenus();
+
+    try {
+      const deletedCount = await batchDeleteSessionGroupsPermanently(selectedTrashSessionIds);
+      setStatus(`已永久删除 ${deletedCount} 个分组。`);
+      cancelBulkSelection();
+      await loadSessionCollections("trash", null);
+    } catch (nextError: unknown) {
+      setStatus(nextError instanceof Error ? nextError.message : "批量永久删除失败。");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   function clearDragState() {
     setDragOverSessionId(null);
     setDragOverTabId(null);
@@ -715,6 +894,11 @@ export function ManagerApp() {
     event: React.DragEvent<HTMLButtonElement>,
     sessionId: string
   ) {
+    if (bulkSelectionBucket !== null) {
+      event.preventDefault();
+      return;
+    }
+
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(SESSION_DRAG_TYPE, sessionId);
     setDraggedSessionId(sessionId);
@@ -747,7 +931,7 @@ export function ManagerApp() {
     event: React.DragEvent<HTMLElement>,
     targetSessionId: string
   ) {
-    if (selectedBucket !== "active") {
+    if (selectedBucket !== "active" || bulkSelectionBucket !== null) {
       return;
     }
 
@@ -1042,89 +1226,145 @@ export function ManagerApp() {
                   <span className="manager-tree__count">{activeTabCount}</span>
                 </button>
 
-                <button
-                  className="manager-tree__toggle"
-                  onClick={() => setIsActiveExpanded((current) => !current)}
-                  type="button"
-                >
-                  {isActiveExpanded ? "收起" : "展开"}
-                </button>
+                <div className="manager-tree__section-actions">
+                  <button
+                    className="manager-tree__toggle"
+                    onClick={() => setIsActiveExpanded((current) => !current)}
+                    type="button"
+                  >
+                    {isActiveExpanded ? "收起" : "展开"}
+                  </button>
+                  <button
+                    className="manager-tree__toggle"
+                    disabled={busyKey !== null || selectableActiveSessionCount === 0}
+                    onClick={() =>
+                      isBulkSelectingActive ? cancelBulkSelection() : enterBulkSelection("active")
+                    }
+                    type="button"
+                  >
+                    {isBulkSelectingActive ? "取消选择" : "选择"}
+                  </button>
+                </div>
+
+                {isBulkSelectingActive ? (
+                  <ManagerBulkActionToolbar
+                    bucket="active"
+                    disabled={busyKey !== null}
+                    onCancel={cancelBulkSelection}
+                    onMergeIntoNotes={handleBatchMergeGroupsIntoNotes}
+                    onMoveToTrash={handleBatchMoveGroupsToTrash}
+                    onPermanentDelete={handleBatchDeleteGroupsPermanently}
+                    onRestore={handleBatchRestoreGroupsFromTrash}
+                    selectedCount={selectedActiveSessionIds.length}
+                  />
+                ) : null}
 
                 {isActiveExpanded ? (
                   <ul className="manager-tree__children">
-                    {sessionCollections.activeSessions.map((session) => (
-                      <li
-                        className={`manager-tree__item ${hoveredActiveSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""}`}
-                        key={session.id}
-                        onBlur={(event) => handleActiveSessionItemBlur(event, session.id)}
-                      >
-                        <div className="manager-tree__node-row">
-                          <button
-                            className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "active" ? "manager-tree__node--selected" : ""} ${dragOverSessionId === session.id ? "manager-tree__node--drop-target" : ""} ${draggedSessionId === session.id ? "manager-tree__node--dragging" : ""}`}
-                            id={`session-node-${session.id}`}
-                            draggable
-                            onDragEnd={clearDragState}
-                            onDragLeave={handleSessionDragLeave}
-                            onDragOver={(event) => handleSessionDragOver(event, session.id)}
-                            onDragStart={(event) => handleSessionDragStart(event, session.id)}
-                            onDrop={(event) => void handleSessionDrop(event, session.id)}
-                            onClick={() => selectSession("active", session.id)}
-                            type="button"
-                          >
-                            <span className="manager-tree__node-title">
-                              {session.pinned ? "📌 " : ""}
-                              {session.title}
-                            </span>
-                            <span className="manager-tree__count">{session.tabCount}</span>
-                          </button>
-                          <button
-                            aria-expanded={hoveredActiveSessionMenuId === session.id}
-                            aria-haspopup="menu"
-                            aria-label={`分组操作：${session.title}`}
-                            className="manager-tree__menu-trigger"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggleActiveSessionMenu(session.id);
-                            }}
-                            type="button"
-                          >
-                            ...
-                          </button>
-                        </div>
-                        {hoveredActiveSessionMenuId === session.id ? (
+                    {sessionCollections.activeSessions.map((session) => {
+                      const isDefaultNotesGroup = session.title === DEFAULT_NOTES_GROUP_TITLE;
+                      const isBulkSelected = selectedActiveSessionIdSet.has(session.id);
+                      const isBulkDisabled = isBulkSelectingActive && isDefaultNotesGroup;
+
+                      return (
+                        <li
+                          className={`manager-tree__item ${hoveredActiveSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""} ${isBulkDisabled ? "manager-tree__item--disabled" : ""}`}
+                          key={session.id}
+                          onBlur={(event) => handleActiveSessionItemBlur(event, session.id)}
+                        >
                           <div
-                            aria-label={`分组操作：${session.title}`}
-                            className="manager-tree__menu manager-tree__menu--popover"
-                            role="menu"
+                            className={`manager-tree__node-row ${isBulkSelectingActive ? "manager-tree__node-row--selecting" : ""}`}
                           >
+                            {isBulkSelectingActive ? (
+                              <input
+                                aria-label={`选择分组：${session.title}`}
+                                checked={isBulkSelected}
+                                className="manager-tree__checkbox"
+                                disabled={isBulkDisabled || busyKey !== null}
+                                onChange={() => toggleBulkSessionSelection("active", session.id)}
+                                title={isDefaultNotesGroup ? "笔记分组不能加入批量操作" : undefined}
+                                type="checkbox"
+                              />
+                            ) : null}
                             <button
-                              className="manager-tree__menu-item"
-                              onClick={() => void handleRenameGroup(session.id, session.title)}
-                              role="menuitem"
+                              aria-disabled={isBulkDisabled ? "true" : undefined}
+                              className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "active" ? "manager-tree__node--selected" : ""} ${dragOverSessionId === session.id ? "manager-tree__node--drop-target" : ""} ${draggedSessionId === session.id ? "manager-tree__node--dragging" : ""}`}
+                              id={`session-node-${session.id}`}
+                              draggable={!isBulkSelectingActive}
+                              onDragEnd={clearDragState}
+                              onDragLeave={handleSessionDragLeave}
+                              onDragOver={(event) => handleSessionDragOver(event, session.id)}
+                              onDragStart={(event) => handleSessionDragStart(event, session.id)}
+                              onDrop={(event) => void handleSessionDrop(event, session.id)}
+                              onClick={() => {
+                                if (isBulkSelectingActive) {
+                                  if (!isBulkDisabled && busyKey === null) {
+                                    toggleBulkSessionSelection("active", session.id);
+                                  }
+                                  return;
+                                }
+
+                                selectSession("active", session.id);
+                              }}
                               type="button"
                             >
-                              重命名
+                              <span className="manager-tree__node-title">
+                                {session.pinned ? "📌 " : ""}
+                                {session.title}
+                              </span>
+                              <span className="manager-tree__count">{session.tabCount}</span>
                             </button>
-                            <button
-                              className="manager-tree__menu-item"
-                              onClick={() => void handleTogglePin(session.id)}
-                              role="menuitem"
-                              type="button"
-                            >
-                              {session.pinned ? "取消固定" : "固定分组"}
-                            </button>
-                            <button
-                              className="manager-tree__menu-item"
-                              onClick={() => void handleMoveGroupToTrash(session.id)}
-                              role="menuitem"
-                              type="button"
-                            >
-                              移到回收站
-                            </button>
+                            {!isBulkSelectingActive ? (
+                              <button
+                                aria-expanded={hoveredActiveSessionMenuId === session.id}
+                                aria-haspopup="menu"
+                                aria-label={`分组操作：${session.title}`}
+                                className="manager-tree__menu-trigger"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleActiveSessionMenu(session.id);
+                                }}
+                                type="button"
+                              >
+                                ...
+                              </button>
+                            ) : null}
                           </div>
-                        ) : null}
-                      </li>
-                    ))}
+                          {!isBulkSelectingActive && hoveredActiveSessionMenuId === session.id ? (
+                            <div
+                              aria-label={`分组操作：${session.title}`}
+                              className="manager-tree__menu manager-tree__menu--popover"
+                              role="menu"
+                            >
+                              <button
+                                className="manager-tree__menu-item"
+                                onClick={() => void handleRenameGroup(session.id, session.title)}
+                                role="menuitem"
+                                type="button"
+                              >
+                                重命名
+                              </button>
+                              <button
+                                className="manager-tree__menu-item"
+                                onClick={() => void handleTogglePin(session.id)}
+                                role="menuitem"
+                                type="button"
+                              >
+                                {session.pinned ? "取消固定" : "固定分组"}
+                              </button>
+                              <button
+                                className="manager-tree__menu-item"
+                                onClick={() => void handleMoveGroupToTrash(session.id)}
+                                role="menuitem"
+                                type="button"
+                              >
+                                移到回收站
+                              </button>
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : null}
               </div>
@@ -1142,72 +1382,124 @@ export function ManagerApp() {
                   <span className="manager-tree__count">{sessionCollections.trashedSessions.length}</span>
                 </button>
 
-                <button
-                  className="manager-tree__toggle"
-                  onClick={() => setIsTrashExpanded((current) => !current)}
-                  type="button"
-                >
-                  {isTrashExpanded ? "收起" : "展开"}
-                </button>
+                <div className="manager-tree__section-actions">
+                  <button
+                    className="manager-tree__toggle"
+                    onClick={() => setIsTrashExpanded((current) => !current)}
+                    type="button"
+                  >
+                    {isTrashExpanded ? "收起" : "展开"}
+                  </button>
+                  <button
+                    className="manager-tree__toggle"
+                    disabled={busyKey !== null || sessionCollections.trashedSessions.length === 0}
+                    onClick={() =>
+                      isBulkSelectingTrash ? cancelBulkSelection() : enterBulkSelection("trash")
+                    }
+                    type="button"
+                  >
+                    {isBulkSelectingTrash ? "取消选择" : "选择"}
+                  </button>
+                </div>
+
+                {isBulkSelectingTrash ? (
+                  <ManagerBulkActionToolbar
+                    bucket="trash"
+                    disabled={busyKey !== null}
+                    onCancel={cancelBulkSelection}
+                    onMergeIntoNotes={handleBatchMergeGroupsIntoNotes}
+                    onMoveToTrash={handleBatchMoveGroupsToTrash}
+                    onPermanentDelete={handleBatchDeleteGroupsPermanently}
+                    onRestore={handleBatchRestoreGroupsFromTrash}
+                    selectedCount={selectedTrashSessionIds.length}
+                  />
+                ) : null}
 
                 {isTrashExpanded ? (
                   <ul className="manager-tree__children">
-                    {sessionCollections.trashedSessions.map((session) => (
-                      <li
-                        className={`manager-tree__item ${hoveredTrashSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""}`}
-                        key={session.id}
-                        onBlur={(event) => handleTrashSessionItemBlur(event, session.id)}
-                      >
-                        <div className="manager-tree__node-row">
-                          <button
-                            className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "trash" ? "manager-tree__node--selected" : ""}`}
-                            id={`session-node-${session.id}`}
-                            onClick={() => selectSession("trash", session.id)}
-                            type="button"
-                          >
-                            <span className="manager-tree__node-title">{session.title}</span>
-                            <span className="manager-tree__count">{session.tabCount}</span>
-                          </button>
-                          <button
-                            aria-expanded={hoveredTrashSessionMenuId === session.id}
-                            aria-haspopup="menu"
-                            aria-label={`回收站分组操作：${session.title}`}
-                            className="manager-tree__menu-trigger"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggleTrashSessionMenu(session.id);
-                            }}
-                            type="button"
-                          >
-                            ...
-                          </button>
-                        </div>
-                        {hoveredTrashSessionMenuId === session.id ? (
+                    {sessionCollections.trashedSessions.map((session) => {
+                      const isBulkSelected = selectedTrashSessionIdSet.has(session.id);
+
+                      return (
+                        <li
+                          className={`manager-tree__item ${hoveredTrashSessionMenuId === session.id ? "manager-tree__item--menu-open" : ""}`}
+                          key={session.id}
+                          onBlur={(event) => handleTrashSessionItemBlur(event, session.id)}
+                        >
                           <div
-                            aria-label={`回收站分组操作：${session.title}`}
-                            className="manager-tree__menu manager-tree__menu--popover"
-                            role="menu"
+                            className={`manager-tree__node-row ${isBulkSelectingTrash ? "manager-tree__node-row--selecting" : ""}`}
                           >
+                            {isBulkSelectingTrash ? (
+                              <input
+                                aria-label={`选择分组：${session.title}`}
+                                checked={isBulkSelected}
+                                className="manager-tree__checkbox"
+                                disabled={busyKey !== null}
+                                onChange={() => toggleBulkSessionSelection("trash", session.id)}
+                                type="checkbox"
+                              />
+                            ) : null}
                             <button
-                              className="manager-tree__menu-item"
-                              onClick={() => void handleRestoreGroupFromTrash(session.id)}
-                              role="menuitem"
+                              className={`manager-tree__node ${selectedSessionId === session.id && selectedBucket === "trash" ? "manager-tree__node--selected" : ""}`}
+                              id={`session-node-${session.id}`}
+                              onClick={() => {
+                                if (isBulkSelectingTrash) {
+                                  if (busyKey === null) {
+                                    toggleBulkSessionSelection("trash", session.id);
+                                  }
+                                  return;
+                                }
+
+                                selectSession("trash", session.id);
+                              }}
                               type="button"
                             >
-                              恢复分组
+                              <span className="manager-tree__node-title">{session.title}</span>
+                              <span className="manager-tree__count">{session.tabCount}</span>
                             </button>
-                            <button
-                              className="manager-tree__menu-item"
-                              onClick={() => void handleDeleteSessionPermanently(session.id)}
-                              role="menuitem"
-                              type="button"
-                            >
-                              永久删除
-                            </button>
+                            {!isBulkSelectingTrash ? (
+                              <button
+                                aria-expanded={hoveredTrashSessionMenuId === session.id}
+                                aria-haspopup="menu"
+                                aria-label={`回收站分组操作：${session.title}`}
+                                className="manager-tree__menu-trigger"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleTrashSessionMenu(session.id);
+                                }}
+                                type="button"
+                              >
+                                ...
+                              </button>
+                            ) : null}
                           </div>
-                        ) : null}
-                      </li>
-                    ))}
+                          {!isBulkSelectingTrash && hoveredTrashSessionMenuId === session.id ? (
+                            <div
+                              aria-label={`回收站分组操作：${session.title}`}
+                              className="manager-tree__menu manager-tree__menu--popover"
+                              role="menu"
+                            >
+                              <button
+                                className="manager-tree__menu-item"
+                                onClick={() => void handleRestoreGroupFromTrash(session.id)}
+                                role="menuitem"
+                                type="button"
+                              >
+                                恢复分组
+                              </button>
+                              <button
+                                className="manager-tree__menu-item"
+                                onClick={() => void handleDeleteSessionPermanently(session.id)}
+                                role="menuitem"
+                                type="button"
+                              >
+                                永久删除
+                              </button>
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : null}
               </div>
