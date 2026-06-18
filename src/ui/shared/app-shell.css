@@ -420,6 +420,18 @@ input[type="radio"] {
   text-align: left;
 }
 
+.manager-tree__section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.manager-tree__section-actions .manager-tree__toggle {
+  width: auto;
+}
+
 .manager-tree__section-title,
 .manager-tree__node-title {
   display: flex;
@@ -445,6 +457,34 @@ input[type="radio"] {
   padding: 2px 0 0 10px;
 }
 
+.manager-tree__batch-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(24, 33, 38, 0.08);
+  border-radius: 10px;
+  background: rgba(250, 247, 241, 0.78);
+}
+
+.manager-tree__batch-count {
+  color: #5f6a72;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.manager-tree__batch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.manager-tree__checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0 2px 0 0;
+}
+
 .manager-tree__node {
   min-height: 32px;
   border-radius: 8px;
@@ -464,11 +504,23 @@ input[type="radio"] {
   z-index: 1;
 }
 
+.manager-tree__item--disabled {
+  opacity: 0.58;
+}
+
+.manager-tree__item--disabled .manager-tree__node {
+  cursor: not-allowed;
+}
+
 .manager-tree__node-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 2px;
   align-items: center;
+}
+
+.manager-tree__node-row--selecting {
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .manager-tree__node--selected {
