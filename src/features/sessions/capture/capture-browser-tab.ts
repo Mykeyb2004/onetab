@@ -1,9 +1,10 @@
 import type { BrowserTab } from "../../../types/browser";
-import { captureBrowserTabs, type CaptureDependencies } from "./capture-tabs";
+import type { CaptureDependencies, CaptureResult } from "./capture-tabs";
+import { captureBrowserTabToDefaultNotesGroup } from "./capture-browser-tab-to-default-notes-group";
 
 export async function captureBrowserTab(
   browserTab: BrowserTab | null,
   dependencies: CaptureDependencies
-) {
-  return captureBrowserTabs(browserTab ? [browserTab] : [], dependencies);
+): Promise<CaptureResult> {
+  return captureBrowserTabToDefaultNotesGroup(browserTab, dependencies);
 }
