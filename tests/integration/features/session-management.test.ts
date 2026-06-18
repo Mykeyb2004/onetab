@@ -164,6 +164,65 @@ describe("session management features", () => {
     ).rejects.toThrow("Only active session groups can be moved to trash.");
   });
 
+  it("should reject selecting the active notes group when merging into notes", async () => {
+    const storage = createMemoryStorage();
+    const rootState = createDefaultRootState();
+    rootState.sessions = [
+      createSessionGroup({
+        id: "notes",
+        title: DEFAULT_NOTES_GROUP_TITLE,
+        tabCount: 1,
+        tabs: [
+          {
+            id: "tab-notes-1",
+            title: "Existing",
+            url: "https://example.com/existing",
+            favIconUrl: null,
+            createdAt: "2026-04-19T09:00:00.000Z",
+            lastOpenedAt: null,
+            originalIndex: 4
+          }
+        ]
+      }),
+      createSessionGroup({ id: "session-1", title: "One" }),
+      createSessionGroup({ id: "session-2", title: "Two" })
+    ];
+
+    await writeRootState(storage, rootState);
+
+    await expect(
+      mergeSessionGroupsIntoDefaultNotesGroup(["notes", "session-1", "session-2"], {
+        storage,
+        now: () => new Date("2026-04-19T12:00:00.000Z")
+      })
+    ).rejects.toThrow("The default notes group cannot be selected for merge.");
+  });
+
+  it("should create notes group when merging active groups and no notes group exists", async () => {
+    const storage = createMemoryStorage();
+    const rootState = createDefaultRootState();
+    rootState.sessions = [
+      createSessionGroup({ id: "session-1", title: "One" }),
+      createSessionGroup({ id: "session-2", title: "Two" })
+    ];
+
+    await writeRootState(storage, rootState);
+
+    const result = await mergeSessionGroupsIntoDefaultNotesGroup(["session-1", "session-2"], {
+      storage,
+      now: () => new Date("2026-04-19T12:00:00.000Z")
+    });
+    const state = await readRootState(storage);
+    const notes = state.sessions.find((session) => session.title === DEFAULT_NOTES_GROUP_TITLE);
+
+    expect(result.targetSession.title).toBe(DEFAULT_NOTES_GROUP_TITLE);
+    expect(result.mergedGroupCount).toBe(2);
+    expect(result.mergedTabCount).toBe(4);
+    expect(notes?.tabCount).toBe(4);
+    expect(notes?.tabs.map((tab) => tab.originalIndex)).toEqual([0, 1, 2, 3]);
+    expect(state.sessions).toHaveLength(1);
+  });
+
   it("should merge active session groups into an existing notes group and remove sources", async () => {
     const storage = createMemoryStorage();
     const rootState = createDefaultRootState();
@@ -190,7 +249,7 @@ describe("session management features", () => {
 
     await writeRootState(storage, rootState);
 
-    const result = await mergeSessionGroupsIntoDefaultNotesGroup(["notes", "session-1", "session-2"], {
+    const result = await mergeSessionGroupsIntoDefaultNotesGroup(["session-1", "session-2"], {
       storage,
       now: () => new Date("2026-04-19T12:00:00.000Z")
     });
@@ -205,31 +264,6 @@ describe("session management features", () => {
     expect(state.sessions.some((session) => session.id === "session-1")).toBe(false);
     expect(state.sessions.some((session) => session.id === "session-2")).toBe(false);
     expect(state.sessions.some((session) => session.id === "notes")).toBe(true);
-  });
-
-  it("should create notes group when merging active groups and no notes group exists", async () => {
-    const storage = createMemoryStorage();
-    const rootState = createDefaultRootState();
-    rootState.sessions = [
-      createSessionGroup({ id: "session-1", title: "One" }),
-      createSessionGroup({ id: "session-2", title: "Two" })
-    ];
-
-    await writeRootState(storage, rootState);
-
-    const result = await mergeSessionGroupsIntoDefaultNotesGroup(["session-1", "session-2"], {
-      storage,
-      now: () => new Date("2026-04-19T12:00:00.000Z")
-    });
-    const state = await readRootState(storage);
-    const notes = state.sessions.find((session) => session.title === DEFAULT_NOTES_GROUP_TITLE);
-
-    expect(result.targetSession.title).toBe(DEFAULT_NOTES_GROUP_TITLE);
-    expect(result.mergedGroupCount).toBe(2);
-    expect(result.mergedTabCount).toBe(4);
-    expect(notes?.tabCount).toBe(4);
-    expect(notes?.tabs.map((tab) => tab.originalIndex)).toEqual([0, 1, 2, 3]);
-    expect(state.sessions).toHaveLength(1);
   });
 
   it("should reject trash groups when merging into notes", async () => {

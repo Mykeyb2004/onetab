@@ -108,9 +108,12 @@ export async function mergeSessionGroupsIntoDefaultNotesGroup(
   const now = dependencies.now?.() ?? new Date();
   const mergedAt = now.toISOString();
   const existingTarget = selectDefaultNotesGroup(state.sessions);
-  const sourceIds = new Set(
-    selectedSessionIds.filter((sessionId) => sessionId !== existingTarget?.id)
-  );
+
+  if (existingTarget !== null && selectedSessionIds.includes(existingTarget.id)) {
+    throw new Error("The default notes group cannot be selected for merge.");
+  }
+
+  const sourceIds = new Set(selectedSessionIds);
 
   if (sourceIds.size === 0) {
     throw new Error("Select at least one non-notes session group.");
